@@ -1,12 +1,16 @@
 package com.sayra.umai.Repos;
 
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 import com.sayra.umai.Entities.Author;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface AuthorRepo extends CrudRepository<Author, Long> {
+public interface AuthorRepo extends JpaRepository<Author, Long> {
     Optional<Author> findByName(String name);
+
+    List<Author> findAll();
 }

@@ -1,6 +1,5 @@
 package com.sayra.umai.Services;
 
-import com.sayra.umai.DTO.PageOutDTO;
 import com.sayra.umai.Entities.*;
 import com.sayra.umai.Other.WorkStatus;
 import com.sayra.umai.Repos.AuthorRepo;
@@ -49,28 +48,22 @@ public class WorkService {
                            String author,
                            String genre,
                            String description,
-                           MultipartFile coverImage // если не используешь, можно передавать null
+                           MultipartFile coverImage //null pokachto
     ) throws IOException {
 
-        // 1) Сохранить временный/чистый PDF на диск
         File cleanedPdf = pdfService.savePdf(pdfFile);
 
-        // 2) Вызвать парсер, получить список глав с уже разбитыми чанками <= 500KB
         List<PdfService.ChapterData> chaptersData = pdfService.extractChapters(cleanedPdf);
 
-        // 3) Создать Work и заполнить поля
         Work work = new Work();
         work.setTitle(title);
         work.setAuthor(author);
         work.setDescription(description);
         work.setFilePath(cleanedPdf.getAbsolutePath());
-        // Если у тебя в сущности есть поле genre (пока его нет — можно добавить),
-        // то раскомментируй следующую строку:
         // work.setGenre(genre);
         work.setGenre(genre);
         work.setStatus(WorkStatus.PENDING);
 
-        // 4) Собираем Chapter -> Chunk объекты согласно chaptersData
         List<Chapter> chapters = new ArrayList<>();
         for (PdfService.ChapterData chData : chaptersData) {
             Chapter chapter = new Chapter();
@@ -83,8 +76,6 @@ public class WorkService {
             for (String chunkText : chData.chunks()) {
                 Chunk chunk = new Chunk();
                 chunk.setChunkNumber(chunkNum++);
-                // Оборачиваем в HTML параграфы — фронт ожидает html в "data"
-                // (если хочешь, можно оставить plain text)
                 chunk.setText(chunkText);
                 chunk.setChapter(chapter);
                 chunks.add(chunk);
@@ -95,10 +86,8 @@ public class WorkService {
 
         work.setChapters(chapters);
 
-        // 5) Сохранить cascade: Work -> Chapters -> Chunks
         Work saved = workRepo.save(work);
 
-        // Возвращаем сохранённую сущность
         return saved;
     }
 

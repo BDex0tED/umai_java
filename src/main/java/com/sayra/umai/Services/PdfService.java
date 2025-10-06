@@ -19,10 +19,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.regex.Pattern;
+//if there's an image it should be exported =>future task
 
 @Service
 public class PdfService {
 
+    private final String type_html = "html";
     private static final int CHUNK_SIZE_BYTES = 500 * 1024; // 500 KB
     // Более гибкий паттерн для fallback деления (строка-начало)
     private static final Pattern CHAPTER_PATTERN = Pattern.compile(
@@ -77,10 +79,8 @@ public class PdfService {
         while (current != null) {
             PDPage startPage = resolveDestinationPage(current, document);
             if (startPage != null) {
-                // вычисляем индекс страницы (0-based)
                 int startIndex = document.getPages().indexOf(startPage);
 
-                // ищем следующего "соседа" и его страницу, чтобы получить endIndex = nextIndex - 1
                 PDOutlineItem next = current.getNextSibling();
                 PDPage nextPage = (next != null) ? resolveDestinationPage(next, document) : null;
                 int endIndex;
@@ -91,7 +91,7 @@ public class PdfService {
                 }
                 if (endIndex < startIndex) endIndex = document.getNumberOfPages() - 1;
 
-                stripper.setStartPage(startIndex + 1); // setStartPage — 1-based
+                stripper.setStartPage(startIndex + 1);
                 stripper.setEndPage(endIndex + 1);
 
                 String raw = stripper.getText(document);
@@ -99,12 +99,11 @@ public class PdfService {
                 if (!text.isEmpty()) {
                     List<String> chunks = chunkTextToHtml(text, CHUNK_SIZE_BYTES);
                     String title = Optional.ofNullable(current.getTitle()).orElse("Глава " + chapterNumber);
-                    chapters.add(new ChapterData(chapterNumber++, title, chunks));
+                    chapters.add(new ChapterData(chapterNumber++, title, type_html, chunks));
                     System.out.printf("Parsed chapter #%d title='%s' pages=%d..%d chars=%d chunks=%d%n",
                             chapterNumber-1, title, startIndex+1, endIndex+1, text.length(), chunks.size());
                 }
             } else {
-                // Не смогли получить страницу для этого пункта оглавления — логируем
                 System.out.println("Warning: outline item without resolvable page: '" + current.getTitle() + "'");
             }
             current = current.getNextSibling();
@@ -155,7 +154,6 @@ public class PdfService {
                 return pd.getPage();
             }
         } catch (Exception e) {
-            // best-effort, не критично
         }
         return null;
     }
@@ -180,9 +178,8 @@ public class PdfService {
         List<ChapterData> chapters = new ArrayList<>();
 
         if (positions.isEmpty()) {
-            // Нет ни одной главы — одна автоматическая
             List<String> chunks = chunkTextToHtml(fullText, CHUNK_SIZE_BYTES);
-            chapters.add(new ChapterData(1, "Автоматическая глава", chunks));
+            chapters.add(new ChapterData(1, "Автоматическая глава",type_html, chunks));
             return chapters;
         }
 
@@ -194,7 +191,7 @@ public class PdfService {
 
             if (!body.isEmpty()) {
                 List<String> chunks = chunkTextToHtml(body, CHUNK_SIZE_BYTES);
-                chapters.add(new ChapterData(i + 1, title, chunks));
+                chapters.add(new ChapterData(i + 1, title,type_html, chunks));
                 System.out.printf("Fallback chapter #%d title='%s' chars=%d chunks=%d%n",
                         i+1, title, body.length(), chunks.size());
             }
@@ -211,8 +208,8 @@ public class PdfService {
             String lower = trimmed.toLowerCase();
             boolean skip = LINK_PATTERN.matcher(trimmed).find()
                     || WORDS_TO_REMOVE.stream().anyMatch(lower::contains)
-                    || trimmed.matches("^\\d+$") // отдельная строка — номер страницы
-                    || trimmed.length() <= 2; // очень короткие строки (часто номера/заголовки шапок)
+                    || trimmed.matches("^\\d+$")
+                    || trimmed.length() <= 2;
             if (!skip) {
                 sb.append(trimmed).append("\n");
             }
@@ -233,7 +230,6 @@ public class PdfService {
             String paraHtml = "<p>" + escapeHtml(p).replace("\n", "<br/>") + "</p>";
             byte[] paraBytes = paraHtml.getBytes(StandardCharsets.UTF_8);
 
-            // Если один параграф сам больше чем maxBytes — разбиваем его по символам
             if (paraBytes.length > maxBytes) {
                 // flush current
                 if (current.length() > 0) {
@@ -241,7 +237,6 @@ public class PdfService {
                     current.setLength(0);
                     currentBytes = 0;
                 }
-                // split the big paragraph into smaller pieces
                 int start = 0;
                 int len = p.length();
                 while (start < len) {
@@ -280,5 +275,5 @@ public class PdfService {
     }
 
     // ---------------- DTO для главы ----------------
-    public record ChapterData(int chapterNumber, String title, List<String> chunks) {}
+    public record ChapterData(int chapterNumber, String title,String type, List<String> chunks) {}
 }

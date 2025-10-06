@@ -12,6 +12,9 @@ public class Chunk {
 
     private Integer chunkNumber;
 
+    @Column(nullable = false)
+    private String type;
+
     @Column(nullable = false, columnDefinition = "text")
     private String text;
 
