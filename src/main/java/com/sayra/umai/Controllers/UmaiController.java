@@ -65,9 +65,14 @@ public class UmaiController {
 //        return workService.getPageOfWork(work_id, page_num);
 //    }
 //
-//    @GetMapping("/works")
-//    public ResponseEntity<List<WorkAllDTO>> getAllWorks(){
-//        return workService.getAllWorks();
-//    }
+    @GetMapping("/works")
+    public ResponseEntity<List<Work>> getAllWorks(){
+        return ResponseEntity.ok(workService.getAllWorks());
+    }
+
+    @GetMapping("/work/{id}")
+    public ResponseEntity<Work> getWorkById(@PathVariable Long id){
+        return ResponseEntity.ok(workService.findById(id));
+    }
 
 }

@@ -1,5 +1,6 @@
 package com.sayra.umai.Entities;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.sayra.umai.Other.WorkStatus;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -39,6 +40,7 @@ public class Work {
     private LocalDateTime created_at = LocalDateTime.now();
 
     @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonManagedReference
     private List<Chapter> chapters;
 
     public void setFilePath(String filepath) {

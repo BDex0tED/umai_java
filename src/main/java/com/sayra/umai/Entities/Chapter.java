@@ -1,5 +1,6 @@
 package com.sayra.umai.Entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -20,6 +21,7 @@ public class Chapter {
 
     @ManyToOne
     @JoinColumn(name="work_id", nullable = false)
+    @JsonBackReference
     private Work work;
 
     @OneToMany(mappedBy = "chapter",  cascade = CascadeType.ALL, orphanRemoval = true)

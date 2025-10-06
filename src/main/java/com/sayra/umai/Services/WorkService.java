@@ -36,6 +36,13 @@ public class WorkService {
         return workRepo.findById(id).orElse(null);
     }
 
+    public List<Work> getAllWorks(){
+        return workRepo.findAllBy();
+    }
+
+
+
+
     @Transactional
     public Work uploadWork(MultipartFile pdfFile,
                            String title,
@@ -145,15 +152,6 @@ public class WorkService {
 //        return book;
 //    }
 
-    public ResponseEntity<List<Chapter>> getChaptersOfWork(Long workId) {
-        Work work = workRepo.findById(workId).orElse(null);
-        if(work == null) return ResponseEntity.notFound().build();
-
-        List<Chapter> chapters = work.getChapters();
-        if(chapters.isEmpty()) return ResponseEntity.notFound().build();
-
-        return ResponseEntity.ok(chapters);
-    }
 
 
 
