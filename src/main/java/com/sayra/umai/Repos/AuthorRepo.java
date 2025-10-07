@@ -12,5 +12,7 @@ import java.util.Optional;
 public interface AuthorRepo extends JpaRepository<Author, Long> {
     Optional<Author> findByName(String name);
 
+    Optional<Author> findById(Long id);
+
     List<Author> findAll();
 }

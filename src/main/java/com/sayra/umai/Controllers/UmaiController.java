@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/umai/")
@@ -29,28 +30,17 @@ public class UmaiController {
         return ResponseEntity.ok("Yokoso");
     }
 
-//    @PostMapping(value = "/uploadPdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-//    @Operation(summary = "Загрузка PDF книги и парсинг по главам и чанкам (≤ 500 КБ каждый)")
-//    public ResponseEntity<Work> uploadPdf(
-//            @RequestPart("file") MultipartFile file,
-//            @RequestParam("bookTitle") String title,
-//            @RequestParam("author") String author,
-//            @RequestParam(value = "description", required = false) String description
-//    ) throws Exception {
-//        Work savedWork = workService.uploadWork(title, author, description, file);
-//        return ResponseEntity.ok(savedWork);
-//    }
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadWork(
             @RequestParam("file") MultipartFile file,
             @RequestParam("title") String title,
-            @RequestParam("author") String author,
-            @RequestParam(value = "genre", required = false) String genre,
+            @RequestParam("author") Long authorId,
+            @RequestParam(value = "genre", required = false) Set<Long> genresId,
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "cover", required = false) MultipartFile cover
     ) {
         try {
-            Work saved = workService.uploadWork(file, title, author, genre, description, cover);
+            Work saved = workService.uploadWork(file, title, authorId, genresId, description, cover);
             return ResponseEntity.ok(Map.of("workId", saved.getId()));
         } catch (Exception e) {
             e.printStackTrace();
@@ -71,8 +61,8 @@ public class UmaiController {
     }
 
     @GetMapping("/work/{id}")
-    public ResponseEntity<Work> getWorkById(@PathVariable Long id){
-        return ResponseEntity.ok(workService.findById(id));
+    public ResponseEntity<WorkOutDTO> getWorkById(@PathVariable Long id){
+        return workService.findById(id);
     }
 
 }

@@ -33,6 +33,7 @@ public class AuthorService {
         author.setBio(authorInDTO.getBio());
         author.setWiki(authorInDTO.getWiki());
         author.setDate(authorInDTO.getDateOfBirth());
+        author.setPhoto(authorInDTO.getPhoto());
 //        author.setPhoto(authorInDTO.getPhoto()); should be in db then the url
 //        author.setWorks(); need to be done
         authorRepo.save(author);

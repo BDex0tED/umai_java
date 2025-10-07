@@ -7,6 +7,7 @@ import com.sayra.umai.Services.AuthorService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -26,7 +27,7 @@ public class AuthorController {
     }
 
     @PostMapping("/create-author")
-    public ResponseEntity<Author> createAuthor(AuthorInDTO authorInDTO) {
+    public ResponseEntity<Author> createAuthor(@RequestBody AuthorInDTO authorInDTO) {
         return authorService.save(authorInDTO);
     }
 }

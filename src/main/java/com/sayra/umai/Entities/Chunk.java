@@ -1,5 +1,6 @@
 package com.sayra.umai.Entities;
 
+import com.sayra.umai.Other.ChunkType;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -13,7 +14,7 @@ public class Chunk {
     private Integer chunkNumber;
 
     @Column(nullable = false)
-    private String type;
+    private ChunkType type;
 
     @Column(nullable = false, columnDefinition = "text")
     private String text;
@@ -22,3 +23,4 @@ public class Chunk {
     @JoinColumn(name="chapter_id",  nullable = false)
     private Chapter chapter;
 }
+

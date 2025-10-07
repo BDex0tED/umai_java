@@ -7,7 +7,7 @@ import lombok.Data;
 
 import java.io.File;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
 
 @Entity
 @Data
@@ -23,9 +23,15 @@ public class Work {
 //    @ManyToOne
 //    @JoinColumn(name = "author_id", nullable = false)
 //    private Author author; потом можно будет сделать словарь и выбирать в админке
-    private String author;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name="author", nullable = false)
+    private Author author;
 
-    private String genre;
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(name="work_genres",
+            joinColumns = @JoinColumn(name = "work_id"),
+            inverseJoinColumns = @JoinColumn(name = "genre_id"))
+    private Set<Genre> genres;
 
     @Column(columnDefinition = "text")
     private String description;

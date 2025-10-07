@@ -1,6 +1,10 @@
 package com.sayra.umai.Services;
 
+import com.sayra.umai.DTO.ChapterOutDTO;
+import com.sayra.umai.DTO.ChunkOutDTO;
+import com.sayra.umai.DTO.WorkOutDTO;
 import com.sayra.umai.Entities.*;
+import com.sayra.umai.Other.ChunkType;
 import com.sayra.umai.Other.WorkStatus;
 import com.sayra.umai.Repos.AuthorRepo;
 import com.sayra.umai.Repos.ChapterRepo;
@@ -13,8 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class WorkService {
@@ -31,8 +34,23 @@ public class WorkService {
         this.genreRepo = genreRepo;
     }
 
-    public Work findById(Long id){
-        return workRepo.findById(id).orElse(null);
+    public ResponseEntity<WorkOutDTO> findById(Long id){
+        Optional<Work> optionalWork = workRepo.findById(id);
+        if(optionalWork.isEmpty()){
+            return ResponseEntity.notFound().build();
+        }
+        Work work = optionalWork.get();
+        List<ChapterOutDTO> chapterOutDTOS = new ArrayList<>();
+        for(Chapter chapter : work.getChapters()){
+            List<ChunkOutDTO> chunkOutDTOS = new ArrayList<>();
+            for(Chunk chunk : chapter.getChunks()){
+                ChunkOutDTO chunkOutDTO = new ChunkOutDTO(chunk.getId(), chunk.getChunkNumber(), chunk.getType(), chunk.getText());
+                chunkOutDTOS.add(chunkOutDTO);}
+            ChapterOutDTO chapterOutDTO = new ChapterOutDTO(chapter.getChapterNumber(), chapter.getChapterTitle(),chunkOutDTOS);
+            chapterOutDTOS.add(chapterOutDTO);
+        }
+        WorkOutDTO workOutDTO = new WorkOutDTO(work.getId(), work.getTitle(), work.getDescription(),work.getAuthor(),work.getGenres(),chapterOutDTOS);
+        return  ResponseEntity.ok(workOutDTO);
     }
 
     public List<Work> getAllWorks(){
@@ -45,8 +63,8 @@ public class WorkService {
     @Transactional
     public Work uploadWork(MultipartFile pdfFile,
                            String title,
-                           String author,
-                           String genre,
+                           Long authorId,
+                           Set<Long> genresId,
                            String description,
                            MultipartFile coverImage //null pokachto
     ) throws IOException {
@@ -55,13 +73,24 @@ public class WorkService {
 
         List<PdfService.ChapterData> chaptersData = pdfService.extractChapters(cleanedPdf);
 
+        Author author = authorRepo.findById(authorId).orElseThrow(()-> new IllegalArgumentException("Author with id: " + authorId + " not found"));
+        Set<Genre> genres = new HashSet<Genre>();
+        if(genresId != null && !genresId.isEmpty()){
+            for(Long genreId : genresId){
+                Genre genre = genreRepo.findById(genreId).orElseThrow(()-> new IllegalArgumentException("Genre with id: "+ genreId+" not found"));
+                genres.add(genre);
+            }
+        }
+
+
+
+
         Work work = new Work();
         work.setTitle(title);
         work.setAuthor(author);
         work.setDescription(description);
         work.setFilePath(cleanedPdf.getAbsolutePath());
-        // work.setGenre(genre);
-        work.setGenre(genre);
+        work.setGenres(genres);
         work.setStatus(WorkStatus.PENDING);
 
         List<Chapter> chapters = new ArrayList<>();
@@ -77,6 +106,9 @@ public class WorkService {
                 Chunk chunk = new Chunk();
                 chunk.setChunkNumber(chunkNum++);
                 chunk.setText(chunkText);
+                //needed to be redone if img is here
+                //it needs to get the type from pdfservice, it will provide
+                chunk.setType(ChunkType.html);
                 chunk.setChapter(chapter);
                 chunks.add(chunk);
             }

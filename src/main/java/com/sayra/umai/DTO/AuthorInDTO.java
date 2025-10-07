@@ -8,7 +8,7 @@ import java.net.URL;
 
 @Data
 public class AuthorInDTO {
-    private MultipartFile photo;
+    private String photo;
     private URL wiki;
     private String name;
     private String bio;
