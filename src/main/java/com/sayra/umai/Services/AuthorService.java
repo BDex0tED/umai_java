@@ -1,12 +1,20 @@
 package com.sayra.umai.Services;
 
+import com.sayra.umai.DTO.AuthorDTO;
 import com.sayra.umai.DTO.AuthorInDTO;
+import com.sayra.umai.DTO.WorkInAuthorInDTO;
 import com.sayra.umai.Entities.Author;
+import com.sayra.umai.Entities.Work;
 import com.sayra.umai.Repos.AuthorRepo;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class AuthorService {
@@ -17,8 +25,34 @@ public class AuthorService {
         this.authorRepo = authorRepo;
     }
 
-    public List<Author> getAllAuthors() {
-        return authorRepo.findAll();
+    @Transactional(readOnly = true)
+    public Set<AuthorDTO> getAllAuthors() {
+
+        Set<Author> authors = authorRepo.findAllWithWorks();
+
+        return authors.stream()
+                .map(author -> {
+
+                    Set<WorkInAuthorInDTO> worksDTO = author.getWorks().stream()
+                            .map(work -> new WorkInAuthorInDTO(
+                                    work.getId(),
+                                    work.getTitle(),
+                                    work.getDescription()
+                            ))
+                            .collect(Collectors.toSet());
+
+                    AuthorDTO authorDTO = new AuthorDTO();
+                    authorDTO.setId(author.getId());
+                    authorDTO.setName(author.getName());
+                    authorDTO.setBio(author.getBio());
+
+                    authorDTO.setDateOfBirth(author.getDate());
+                    authorDTO.setWiki(author.getWiki());
+                    authorDTO.setWorks(worksDTO);
+
+                    return authorDTO;
+                })
+                .collect(Collectors.toSet());
     }
 
     public ResponseEntity<Author> save(AuthorInDTO authorInDTO) {

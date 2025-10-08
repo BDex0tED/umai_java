@@ -1,5 +1,6 @@
 package com.sayra.umai.Controllers;
 
+import com.sayra.umai.DTO.AuthorDTO;
 import com.sayra.umai.DTO.AuthorInDTO;
 import com.sayra.umai.Entities.Author;
 import com.sayra.umai.Repos.AuthorRepo;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Set;
 
 
 @RestController("/author")
@@ -22,7 +24,7 @@ public class AuthorController {
 
 
     @GetMapping()
-    public ResponseEntity<List<Author>> getAllAuthors() {
+    public ResponseEntity<Set<AuthorDTO>> getAllAuthors() {
         return ResponseEntity.ok(authorService.getAllAuthors());
     }
 

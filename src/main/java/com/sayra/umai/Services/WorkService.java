@@ -57,9 +57,6 @@ public class WorkService {
         return workRepo.findAllBy();
     }
 
-
-
-
     @Transactional
     public Work uploadWork(MultipartFile pdfFile,
                            String title,
@@ -74,16 +71,13 @@ public class WorkService {
         List<PdfService.ChapterData> chaptersData = pdfService.extractChapters(cleanedPdf);
 
         Author author = authorRepo.findById(authorId).orElseThrow(()-> new IllegalArgumentException("Author with id: " + authorId + " not found"));
-        Set<Genre> genres = new HashSet<Genre>();
+        Set<Genre> genres = new HashSet<>();
         if(genresId != null && !genresId.isEmpty()){
             for(Long genreId : genresId){
                 Genre genre = genreRepo.findById(genreId).orElseThrow(()-> new IllegalArgumentException("Genre with id: "+ genreId+" not found"));
                 genres.add(genre);
             }
         }
-
-
-
 
         Work work = new Work();
         work.setTitle(title);
@@ -122,57 +116,6 @@ public class WorkService {
 
         return saved;
     }
-
-    // Небольшая util-функция — простая экранизация
-    private String escapeHtml(String s) {
-        if (s == null) return "";
-        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
-    }
-
-
-//    public Work uploadWork(MultipartFile pdfFile,
-//                           String title,
-//                           String authorName,
-//                           String genreName,
-//                           String description,
-//                           MultipartFile coverImage) throws IOException {
-//
-////        Author author = authorRepo.findByName(authorName)
-////                .orElseGet(() -> authorRepo.save(new Author(authorName)));
-//
-////        Genre genre = genreRepo.findByName(genreName)
-////                .orElseGet(() -> genreRepo.save(new Genre(genreName)));
-//
-//
-//        // 5️⃣ Парсинг PDF и деление на главы/чанки
-//        List<TranslationChunk> chunks = PdfParser.parsePdfToChunks(pdfFile.getBytes());
-//
-//        // 6️⃣ Создание книги
-//        Work book = new Work();
-//        book.setTitle(title);
-//        book.setAuthor(author);
-//        book.setGenre(genre);
-//        book.setDescription(description);
-//        book.setCoverUrl(coverUrl);
-//        book.setPdfUrl(pdfUrl);
-//        book.setStatus(BookStatus.PENDING);
-//
-//        // 7️⃣ Сохранение книги
-//        book = bookRepository.save(book);
-//
-//        // 8️⃣ Сохранение перевода (всегда кыргызский оригинал)
-//        for (int i = 0; i < chunks.size(); i++) {
-//            Translation translation = new Translation();
-//            translation.setBook(book);
-//            translation.setChapterTitle(chunks.get(i).getChapterTitle());
-//            translation.setLanguage("ky");
-//            translation.setContent(chunks.get(i).getJsonContent());
-//            translationRepository.save(translation);
-//        }
-//
-//        return book;
-//    }
-
 
 
 

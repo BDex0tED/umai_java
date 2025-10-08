@@ -1,13 +1,17 @@
 package com.sayra.umai.Controllers;
 
+import com.sayra.umai.DTO.GenreDTO;
 import com.sayra.umai.DTO.GenreOutDTO;
 import com.sayra.umai.Entities.Genre;
 import com.sayra.umai.Services.GenreService;
 import lombok.Data;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Bean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @Data
 @RestController()
@@ -19,7 +23,7 @@ public class GenreController {
         this.genreService = genreService;
     }
     @GetMapping()
-    public ResponseEntity<List<Genre>> getAllGenre(){
+    public ResponseEntity<Set<GenreDTO>> getAllGenre(){
         return ResponseEntity.ok(this.genreService.getAllGenre());
     }
 
@@ -30,5 +34,22 @@ public class GenreController {
         genreOutDTO.setId(createdGenre.getId());
         genreOutDTO.setName(name);
         return ResponseEntity.ok(genreOutDTO);
+    }
+
+    @DeleteMapping("delete/{id}")
+    public ResponseEntity<String> deleteGenre(@PathVariable Long id){
+        genreService.deleteGenre(id);
+
+        return ResponseEntity.ok("Genre deleted successfully");
+    }
+
+
+
+
+    @Bean
+    public CommandLineRunner fillDbWithGenres(GenreService genreService) {
+        return args -> {
+            genreService.fillDbWithGenres();
+        };
     }
 }
