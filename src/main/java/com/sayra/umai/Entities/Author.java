@@ -3,11 +3,11 @@ package com.sayra.umai.Entities;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URL;
-import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name="authors")
@@ -20,7 +20,7 @@ public class Author {
     private Long id;
 
     @Column(unique = true)
-    private String photo;
+    private URL photo;
 
     @Column(nullable = false)
     private String name;
@@ -32,7 +32,8 @@ public class Author {
     @Column(columnDefinition = "text")
     private String bio;
 
+    @EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Work> works;
+    private Set<Work> works;
 
 }

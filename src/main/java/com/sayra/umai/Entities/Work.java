@@ -4,8 +4,10 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.sayra.umai.Other.WorkStatus;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.File;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -23,10 +25,13 @@ public class Work {
 //    @ManyToOne
 //    @JoinColumn(name = "author_id", nullable = false)
 //    private Author author; потом можно будет сделать словарь и выбирать в админке
+    @EqualsAndHashCode.Exclude
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="author", nullable = false)
     private Author author;
 
+    //added this to prevent cyclic shit in authorservice.get("/")
+    @EqualsAndHashCode.Exclude
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name="work_genres",
             joinColumns = @JoinColumn(name = "work_id"),
@@ -38,6 +43,8 @@ public class Work {
 
     private String filepath;
 
+    private URL coverUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private WorkStatus status = WorkStatus.PENDING;
@@ -45,9 +52,10 @@ public class Work {
     @Column(columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime created_at = LocalDateTime.now();
 
+    @EqualsAndHashCode.Exclude
     @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference
-    private List<Chapter> chapters;
+    private Set<Chapter> chapters;
 
     public void setFilePath(String filepath) {
         this.filepath = filepath;

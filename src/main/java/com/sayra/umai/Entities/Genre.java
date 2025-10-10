@@ -3,6 +3,7 @@ package com.sayra.umai.Entities;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.util.*;
@@ -20,6 +21,7 @@ public class Genre {
     @Column(nullable = false, unique = true)
     private String name;
 
+    @EqualsAndHashCode.Exclude
     @ManyToMany(mappedBy = "genres", fetch = FetchType.LAZY)
     private Set<Work> works;
 

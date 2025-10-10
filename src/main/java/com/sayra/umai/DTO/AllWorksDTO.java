@@ -9,9 +9,10 @@ import java.util.Set;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ChapterOutDTO {
-    private int chapterNumber;
-    private String chapterTitle;
-
-    private Set<ChunkOutDTO> chunks;
+public class AllWorksDTO {
+    private Long id;
+    private String title;
+    private String description;
+    private String authorName;
+    private Set<GenreDTO> genres;
 }

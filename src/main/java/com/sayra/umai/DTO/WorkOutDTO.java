@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+
+import java.net.URL;
 import java.util.Set;
 
 @Data
@@ -17,9 +19,11 @@ public class WorkOutDTO {
     private Long workId;
     private String title;
     private String description;
-    private Author author;
-    private Set<Genre> genres;
-    private List<ChapterOutDTO> chapters;
+    private AuthorSummaryDTO author;
+    private Set<GenreDTO> genres;
+    private Set<ChapterOutDTO> chapters;
+    private URL coverUrl;
+    private List<WorkBriefDTO> otherWorks;
 
 
 

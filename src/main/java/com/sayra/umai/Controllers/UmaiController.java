@@ -3,25 +3,21 @@ package com.sayra.umai.Controllers;
 import com.sayra.umai.DTO.*;
 import com.sayra.umai.Entities.Work;
 import com.sayra.umai.Services.WorkService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.List;
 
 @RestController
-@RequestMapping("/umai/")
+@RequestMapping("/umai")
 @CrossOrigin(origins = {"http://localhost:5173"})
 public class UmaiController {
-    public WorkService workService;
+    private final WorkService workService;
     public UmaiController(WorkService workService) {
         this.workService = workService;
     }
@@ -48,21 +44,20 @@ public class UmaiController {
         }
     }
 
-
-
 //    @GetMapping("/works/{work_id}/pages/{page_num}")
 //    public ResponseEntity<PagesDTO> getPageOfWork(@PathVariable Long work_id, @PathVariable Integer page_num){
 //        return workService.getPageOfWork(work_id, page_num);
 //    }
 //
     @GetMapping("/works")
-    public ResponseEntity<List<Work>> getAllWorks(){
+    public ResponseEntity<Set<AllWorksDTO>> getAllWorks(){
         return ResponseEntity.ok(workService.getAllWorks());
     }
 
     @GetMapping("/work/{id}")
     public ResponseEntity<WorkOutDTO> getWorkById(@PathVariable Long id){
-        return workService.findById(id);
+        return ResponseEntity.ok(workService.findById(id));
     }
+
 
 }

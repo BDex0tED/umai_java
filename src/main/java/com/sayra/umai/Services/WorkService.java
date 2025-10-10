@@ -1,8 +1,6 @@
 package com.sayra.umai.Services;
 
-import com.sayra.umai.DTO.ChapterOutDTO;
-import com.sayra.umai.DTO.ChunkOutDTO;
-import com.sayra.umai.DTO.WorkOutDTO;
+import com.sayra.umai.DTO.*;
 import com.sayra.umai.Entities.*;
 import com.sayra.umai.Other.ChunkType;
 import com.sayra.umai.Other.WorkStatus;
@@ -10,6 +8,7 @@ import com.sayra.umai.Repos.AuthorRepo;
 import com.sayra.umai.Repos.ChapterRepo;
 import com.sayra.umai.Repos.GenreRepo;
 import com.sayra.umai.Repos.WorkRepo;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -18,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class WorkService {
@@ -34,28 +34,98 @@ public class WorkService {
         this.genreRepo = genreRepo;
     }
 
-    public ResponseEntity<WorkOutDTO> findById(Long id){
-        Optional<Work> optionalWork = workRepo.findById(id);
+    public WorkOutDTO findById(Long id) throws EntityNotFoundException {
+        Optional<Work> optionalWork = workRepo.findByIdWithFullContent(id);
         if(optionalWork.isEmpty()){
-            return ResponseEntity.notFound().build();
+            throw new EntityNotFoundException("Work with id " + id + " not found");
         }
         Work work = optionalWork.get();
-        List<ChapterOutDTO> chapterOutDTOS = new ArrayList<>();
-        for(Chapter chapter : work.getChapters()){
-            List<ChunkOutDTO> chunkOutDTOS = new ArrayList<>();
-            for(Chunk chunk : chapter.getChunks()){
+
+        List<Chapter> sortedChapters = new ArrayList<>(work.getChapters());
+        sortedChapters.sort(Comparator.comparingInt(Chapter::getChapterNumber));
+
+        Set<ChapterOutDTO> chapterOutDTOS = new LinkedHashSet<>();
+        for(Chapter chapter : sortedChapters){
+            List<Chunk> sortedChunks = new ArrayList<>(chapter.getChunks());
+            sortedChunks.sort(Comparator.comparingInt(Chunk::getChunkNumber));
+
+            Set<ChunkOutDTO> chunkOutDTOS = new LinkedHashSet<>();
+            for(Chunk chunk : sortedChunks){
                 ChunkOutDTO chunkOutDTO = new ChunkOutDTO(chunk.getId(), chunk.getChunkNumber(), chunk.getType(), chunk.getText());
-                chunkOutDTOS.add(chunkOutDTO);}
+                chunkOutDTOS.add(chunkOutDTO);
+            }
             ChapterOutDTO chapterOutDTO = new ChapterOutDTO(chapter.getChapterNumber(), chapter.getChapterTitle(),chunkOutDTOS);
             chapterOutDTOS.add(chapterOutDTO);
         }
-        WorkOutDTO workOutDTO = new WorkOutDTO(work.getId(), work.getTitle(), work.getDescription(),work.getAuthor(),work.getGenres(),chapterOutDTOS);
-        return  ResponseEntity.ok(workOutDTO);
+        AuthorSummaryDTO authorDTO = null;
+        if (work.getAuthor() != null) {
+            authorDTO = new AuthorSummaryDTO(work.getAuthor().getId(), work.getAuthor().getName());
+        }
+
+        // Жанры -> легкие DTO
+        Set<GenreDTO> genreDTOS = work.getGenres() == null ? Collections.emptySet()
+                : work.getGenres().stream()
+                .sorted(Comparator.comparing(Genre::getName, Comparator.nullsLast(String::compareToIgnoreCase))
+                        .thenComparing(Genre::getId))
+                .map(g -> new GenreDTO(g.getId(), g.getName()))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        // Другие работы автора (для блока "Еще от автора")
+        List<WorkBriefDTO> otherWorks = Collections.emptyList();
+        if (work.getAuthor() != null) {
+            List<Work> sameAuthorWorks = workRepo.findAllByAuthor_Id(work.getAuthor().getId());
+            otherWorks = sameAuthorWorks.stream()
+                    .filter(w -> !Objects.equals(w.getId(), work.getId()))
+                    .sorted(Comparator.comparing(Work::getTitle, Comparator.nullsLast(String::compareToIgnoreCase))
+                            .thenComparing(Work::getId))
+                    .limit(10) // можно параметризовать
+                    .map(w -> new WorkBriefDTO(w.getId(), w.getTitle(), null)) // coverUrl = null, если появится — заполните
+                    .toList();
+        }
+
+
+        return new WorkOutDTO(
+                work.getId(),
+                work.getTitle(),
+                work.getDescription(),
+                authorDTO,
+                genreDTOS,
+                chapterOutDTOS,
+                work.getCoverUrl(),
+                otherWorks
+        );
+
+
     }
 
-    public List<Work> getAllWorks(){
-        return workRepo.findAllBy();
+
+    public Set<AllWorksDTO> getAllWorks(){
+        Set<Work> works = workRepo.findAllWithGenresAndAuthor();
+
+        return works.stream()
+                .sorted(Comparator.comparing(Work::getTitle, Comparator.nullsLast(String::compareToIgnoreCase))
+                        .thenComparing(Work::getId))
+                .map(work->{
+                    Set<GenreDTO> genreDTOS = work.getGenres().stream()
+                            .sorted(Comparator.comparing(Genre::getName, Comparator.nullsLast(String::compareToIgnoreCase))
+                                    .thenComparing(Genre::getId))
+                            .map(genre-> new GenreDTO(genre.getId(), genre.getName()))
+                            .collect(Collectors.toCollection(LinkedHashSet::new));
+                    AllWorksDTO allWorksDTO = new AllWorksDTO();
+                    allWorksDTO.setId(work.getId());
+                    allWorksDTO.setTitle(work.getTitle());
+                    allWorksDTO.setDescription(work.getDescription());
+                    if(work.getAuthor() != null){
+                        allWorksDTO.setAuthorName(work.getAuthor().getName());
+                    }else{
+                        allWorksDTO.setAuthorName("Unknown author");
+                    }
+                    allWorksDTO.setGenres(genreDTOS);
+                    return allWorksDTO;
+                })
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
+
 
     @Transactional
     public Work uploadWork(MultipartFile pdfFile,
@@ -87,14 +157,14 @@ public class WorkService {
         work.setGenres(genres);
         work.setStatus(WorkStatus.PENDING);
 
-        List<Chapter> chapters = new ArrayList<>();
+        Set<Chapter> chapters = new HashSet<>();
         for (PdfService.ChapterData chData : chaptersData) {
             Chapter chapter = new Chapter();
             chapter.setChapterNumber(chData.chapterNumber());
             chapter.setChapterTitle(chData.title());
             chapter.setWork(work);
 
-            List<Chunk> chunks = new ArrayList<>();
+            Set<Chunk> chunks = new HashSet<>();
             int chunkNum = 1;
             for (String chunkText : chData.chunks()) {
                 Chunk chunk = new Chunk();
