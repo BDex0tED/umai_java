@@ -10,12 +10,12 @@ import com.sayra.umai.Repos.GenreRepo;
 import com.sayra.umai.Repos.WorkRepo;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,6 +32,33 @@ public class WorkService {
         this.chapterRepo = chapterRepo;
         this.authorRepo = authorRepo;
         this.genreRepo = genreRepo;
+    }
+
+    public Set<AllWorksDTO> getAllWorks(){
+        Set<Work> works = workRepo.findAllWithGenresAndAuthor();
+
+        return works.stream()
+                .sorted(Comparator.comparing(Work::getTitle, Comparator.nullsLast(String::compareToIgnoreCase))
+                        .thenComparing(Work::getId))
+                .map(work->{
+                    Set<GenreDTO> genreDTOS = work.getGenres().stream()
+                            .sorted(Comparator.comparing(Genre::getName, Comparator.nullsLast(String::compareToIgnoreCase))
+                                    .thenComparing(Genre::getId))
+                            .map(genre-> new GenreDTO(genre.getId(), genre.getName()))
+                            .collect(Collectors.toCollection(LinkedHashSet::new));
+                    AllWorksDTO allWorksDTO = new AllWorksDTO();
+                    allWorksDTO.setId(work.getId());
+                    allWorksDTO.setTitle(work.getTitle());
+                    allWorksDTO.setDescription(work.getDescription());
+                    if(work.getAuthor() != null){
+                        allWorksDTO.setAuthorName(work.getAuthor().getName());
+                    }else{
+                        allWorksDTO.setAuthorName("Unknown author");
+                    }
+                    allWorksDTO.setGenres(genreDTOS);
+                    return allWorksDTO;
+                })
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     public WorkOutDTO findById(Long id) throws EntityNotFoundException {
@@ -62,7 +89,6 @@ public class WorkService {
             authorDTO = new AuthorSummaryDTO(work.getAuthor().getId(), work.getAuthor().getName());
         }
 
-        // Жанры -> легкие DTO
         Set<GenreDTO> genreDTOS = work.getGenres() == null ? Collections.emptySet()
                 : work.getGenres().stream()
                 .sorted(Comparator.comparing(Genre::getName, Comparator.nullsLast(String::compareToIgnoreCase))
@@ -70,7 +96,6 @@ public class WorkService {
                 .map(g -> new GenreDTO(g.getId(), g.getName()))
                 .collect(Collectors.toCollection(LinkedHashSet::new));
 
-        // Другие работы автора (для блока "Еще от автора")
         List<WorkBriefDTO> otherWorks = Collections.emptyList();
         if (work.getAuthor() != null) {
             List<Work> sameAuthorWorks = workRepo.findAllByAuthor_Id(work.getAuthor().getId());
@@ -78,11 +103,10 @@ public class WorkService {
                     .filter(w -> !Objects.equals(w.getId(), work.getId()))
                     .sorted(Comparator.comparing(Work::getTitle, Comparator.nullsLast(String::compareToIgnoreCase))
                             .thenComparing(Work::getId))
-                    .limit(10) // можно параметризовать
-                    .map(w -> new WorkBriefDTO(w.getId(), w.getTitle(), null)) // coverUrl = null, если появится — заполните
+                    .limit(10)
+                    .map(w -> new WorkBriefDTO(w.getId(), w.getTitle(), null))
                     .toList();
         }
-
 
         return new WorkOutDTO(
                 work.getId(),
@@ -94,38 +118,57 @@ public class WorkService {
                 work.getCoverUrl(),
                 otherWorks
         );
-
-
     }
 
+    public List<AllWorksDTO> searchWorks(String query,
+                                         Long authorId,
+                                         List<Long> genreIds,
+                                         WorkStatus status,
+                                         LocalDateTime createdFrom,
+                                         LocalDateTime createdTo,
+                                         int page,
+                                         int size) {
 
-    public Set<AllWorksDTO> getAllWorks(){
-        Set<Work> works = workRepo.findAllWithGenresAndAuthor();
+        long[] genresArray = (genreIds == null || genreIds.isEmpty())
+                ? new long[0]
+                : genreIds.stream().mapToLong(Long::longValue).toArray();
+
+        boolean hasGenres = genresArray.length > 0;
+
+        int limit = Math.max(1, Math.min(size, 100));
+        int offset = Math.max(0, page) * limit;
+
+        String statusStr = status == null ? null : status.name();
+
+        List<Long> ids = workRepo.searchWorkIdsWithFTS(
+                query, authorId, genresArray, hasGenres, statusStr, createdFrom, createdTo, limit, offset
+        );
+
+        if (ids.isEmpty()) return List.of();
+
+        Set<Work> works = workRepo.findAllWithGenresAndAuthorByIds(ids);
+
+        Map<Long, Integer> order = new HashMap<>();
+        for (int i = 0; i < ids.size(); i++) order.put(ids.get(i), i);
 
         return works.stream()
-                .sorted(Comparator.comparing(Work::getTitle, Comparator.nullsLast(String::compareToIgnoreCase))
-                        .thenComparing(Work::getId))
-                .map(work->{
-                    Set<GenreDTO> genreDTOS = work.getGenres().stream()
+                .sorted(Comparator.comparingInt(w -> order.getOrDefault(w.getId(), Integer.MAX_VALUE)))
+                .map(work -> {
+                    Set<GenreDTO> gd = work.getGenres().stream()
                             .sorted(Comparator.comparing(Genre::getName, Comparator.nullsLast(String::compareToIgnoreCase))
                                     .thenComparing(Genre::getId))
-                            .map(genre-> new GenreDTO(genre.getId(), genre.getName()))
+                            .map(genre -> new GenreDTO(genre.getId(), genre.getName()))
                             .collect(Collectors.toCollection(LinkedHashSet::new));
-                    AllWorksDTO allWorksDTO = new AllWorksDTO();
-                    allWorksDTO.setId(work.getId());
-                    allWorksDTO.setTitle(work.getTitle());
-                    allWorksDTO.setDescription(work.getDescription());
-                    if(work.getAuthor() != null){
-                        allWorksDTO.setAuthorName(work.getAuthor().getName());
-                    }else{
-                        allWorksDTO.setAuthorName("Unknown author");
-                    }
-                    allWorksDTO.setGenres(genreDTOS);
-                    return allWorksDTO;
+                    AllWorksDTO dto = new AllWorksDTO();
+                    dto.setId(work.getId());
+                    dto.setTitle(work.getTitle());
+                    dto.setDescription(work.getDescription());
+                    dto.setAuthorName(work.getAuthor() != null ? work.getAuthor().getName() : "Unknown author");
+                    dto.setGenres(gd);
+                    return dto;
                 })
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+                .toList();
     }
-
 
     @Transactional
     public Work uploadWork(MultipartFile pdfFile,
@@ -133,7 +176,7 @@ public class WorkService {
                            Long authorId,
                            Set<Long> genresId,
                            String description,
-                           MultipartFile coverImage //null pokachto
+                           MultipartFile coverImage
     ) throws IOException {
 
         File cleanedPdf = pdfService.savePdf(pdfFile);
@@ -170,8 +213,6 @@ public class WorkService {
                 Chunk chunk = new Chunk();
                 chunk.setChunkNumber(chunkNum++);
                 chunk.setText(chunkText);
-                //needed to be redone if img is here
-                //it needs to get the type from pdfservice, it will provide
                 chunk.setType(ChunkType.html);
                 chunk.setChapter(chapter);
                 chunks.add(chunk);
@@ -186,8 +227,4 @@ public class WorkService {
 
         return saved;
     }
-
-
-
-
 }
