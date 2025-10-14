@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
@@ -41,10 +42,13 @@ public class UmaiController {
     ) {
         try {
             Work saved = workService.uploadWork(file, title, authorId, genresId, description, cover);
-            return ResponseEntity.ok(Map.of("workId", saved.getId()));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved.getId());
+        } catch(IllegalArgumentException e){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        } catch(RuntimeException e){
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -54,7 +58,7 @@ public class UmaiController {
 //    }
 //
     @GetMapping("/works")
-    public ResponseEntity<Set<AllWorksDTO>> getAllWorks(){
+    public ResponseEntity<List<AllWorksDTO>> getAllWorks(){
         return ResponseEntity.ok(workService.getAllWorks());
     }
 

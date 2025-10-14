@@ -7,6 +7,7 @@ import com.sayra.umai.WorkPackage.Services.GenreService;
 import lombok.Data;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,7 +33,7 @@ public class GenreController {
         GenreOutDTO genreOutDTO = new GenreOutDTO();
         genreOutDTO.setId(createdGenre.getId());
         genreOutDTO.setName(name);
-        return ResponseEntity.ok(genreOutDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(genreOutDTO);
     }
 
     @DeleteMapping("delete/{id}")
@@ -41,9 +42,6 @@ public class GenreController {
 
         return ResponseEntity.ok("Genre deleted successfully");
     }
-
-
-
 
     @Bean
     public CommandLineRunner fillDbWithGenres(GenreService genreService) {

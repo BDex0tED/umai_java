@@ -51,12 +51,12 @@ public class AuthorService {
                 .collect(Collectors.toSet());
     }
 
-    public ResponseEntity<Author> save(AuthorInDTO authorInDTO) {
+    public Author save(AuthorInDTO authorInDTO) {
         if(authorInDTO.getName() == null || authorInDTO.getName().equals("")){
-            return ResponseEntity.badRequest().build();
+            throw new IllegalArgumentException("Author name is required");
         }
         if(authorRepo.findByName(authorInDTO.getName()).isPresent()){
-            return ResponseEntity.badRequest().build();
+            throw new IllegalArgumentException("Author with name: "+authorInDTO.getName()+" already exists");
         }
         Author author = new Author();
         author.setName(authorInDTO.getName());
@@ -67,7 +67,7 @@ public class AuthorService {
 //        author.setPhoto(authorInDTO.getPhoto()); should be in db then the url
 //        author.setWorks(); need to be done
         authorRepo.save(author);
-        return ResponseEntity.ok(author);
+        return author;
 
 
     }

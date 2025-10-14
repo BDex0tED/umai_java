@@ -3,6 +3,7 @@ package com.sayra.umai.WorkPackage.DTO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.List;
 
 import java.util.Set;
 
@@ -14,5 +15,5 @@ public class AllWorksDTO {
     private String title;
     private String description;
     private String authorName;
-    private Set<GenreDTO> genres;
+    private List<GenreDTO> genres;
 }

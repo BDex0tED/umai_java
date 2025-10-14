@@ -45,8 +45,13 @@ public class UserService {
     public UserDTO register(UserDTO userDTO){
         if(userEntityRepo.findByUsername(userDTO.getUsername()).isPresent()){
             System.out.println("Username already exists");
-            throw new RuntimeException("username already exists");
+            throw new RuntimeException("Username already exists");
         }
+        if(userDTO.getUsername() == null || userDTO.getPassword() == null || userDTO.getEmail() == null){
+            throw new BadCredentialsException("Invalid username/email/password");
+        }
+        if(!userDTO.getEmail().contains("@")) throw new BadCredentialsException("Invalid email");
+
         UserEntity userEntity = new UserEntity();
         userEntity.setUsername(userDTO.getUsername());
         userEntity.setPassword(encoder.encode(userDTO.getPassword()));

@@ -16,7 +16,7 @@ import java.util.Set;
 public interface WorkRepo extends JpaRepository<Work, Long> {
 
     @Query("SELECT DISTINCT w FROM Work w LEFT JOIN FETCH w.genres g LEFT JOIN FETCH w.author a")
-    Set<Work> findAllWithGenresAndAuthor();
+    List<Work> findAllWithGenresAndAuthor();
 
     @Query("SELECT w FROM Work w " +
             "LEFT JOIN FETCH w.chapters c " +

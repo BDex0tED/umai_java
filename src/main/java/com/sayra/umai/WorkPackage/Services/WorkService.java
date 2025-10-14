@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,18 +37,18 @@ public class WorkService {
         this.genreRepo = genreRepo;
     }
 
-    public Set<AllWorksDTO> getAllWorks(){
-        Set<Work> works = workRepo.findAllWithGenresAndAuthor();
+    public List<AllWorksDTO> getAllWorks(){
+        List<Work> works = workRepo.findAllWithGenresAndAuthor();
 
         return works.stream()
                 .sorted(Comparator.comparing(Work::getTitle, Comparator.nullsLast(String::compareToIgnoreCase))
                         .thenComparing(Work::getId))
                 .map(work->{
-                    Set<GenreDTO> genreDTOS = work.getGenres().stream()
+                    List<GenreDTO> genreDTOS = work.getGenres().stream()
                             .sorted(Comparator.comparing(Genre::getName, Comparator.nullsLast(String::compareToIgnoreCase))
                                     .thenComparing(Genre::getId))
                             .map(genre-> new GenreDTO(genre.getId(), genre.getName()))
-                            .collect(Collectors.toCollection(LinkedHashSet::new));
+                            .collect(Collectors.toCollection(ArrayList::new));
                     AllWorksDTO allWorksDTO = new AllWorksDTO();
                     allWorksDTO.setId(work.getId());
                     allWorksDTO.setTitle(work.getTitle());
@@ -60,7 +61,7 @@ public class WorkService {
                     allWorksDTO.setGenres(genreDTOS);
                     return allWorksDTO;
                 })
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public WorkOutDTO findById(Long id) throws EntityNotFoundException {
@@ -156,11 +157,11 @@ public class WorkService {
         return works.stream()
                 .sorted(Comparator.comparingInt(w -> order.getOrDefault(w.getId(), Integer.MAX_VALUE)))
                 .map(work -> {
-                    Set<GenreDTO> gd = work.getGenres().stream()
+                    List<GenreDTO> gd = work.getGenres().stream()
                             .sorted(Comparator.comparing(Genre::getName, Comparator.nullsLast(String::compareToIgnoreCase))
                                     .thenComparing(Genre::getId))
                             .map(genre -> new GenreDTO(genre.getId(), genre.getName()))
-                            .collect(Collectors.toCollection(LinkedHashSet::new));
+                            .collect(Collectors.toCollection(ArrayList::new));
                     AllWorksDTO dto = new AllWorksDTO();
                     dto.setId(work.getId());
                     dto.setTitle(work.getTitle());
@@ -180,53 +181,59 @@ public class WorkService {
                            String description,
                            MultipartFile coverImage
     ) throws IOException {
+        try{
 
-        File cleanedPdf = pdfService.savePdf(pdfFile);
+            File cleanedPdf = pdfService.savePdf(pdfFile);
 
-        List<PdfService.ChapterData> chaptersData = pdfService.extractChapters(cleanedPdf);
+            List<PdfService.ChapterData> chaptersData = pdfService.extractChapters(cleanedPdf);
 
-        Author author = authorRepo.findById(authorId).orElseThrow(()-> new IllegalArgumentException("Author with id: " + authorId + " not found"));
-        Set<Genre> genres = new HashSet<>();
-        if(genresId != null && !genresId.isEmpty()){
-            for(Long genreId : genresId){
-                Genre genre = genreRepo.findById(genreId).orElseThrow(()-> new IllegalArgumentException("Genre with id: "+ genreId+" not found"));
-                genres.add(genre);
+            Author author = authorRepo.findById(authorId).orElseThrow(()-> new IllegalArgumentException("Author with id: " + authorId + " not found"));
+            Set<Genre> genres = new HashSet<>();
+            if(genresId != null && !genresId.isEmpty()){
+                for(Long genreId : genresId){
+                    Genre genre = genreRepo.findById(genreId).orElseThrow(()-> new IllegalArgumentException("Genre with id: "+ genreId+" not found"));
+                    genres.add(genre);
+                }
             }
-        }
 
-        Work work = new Work();
-        work.setTitle(title);
-        work.setAuthor(author);
-        work.setDescription(description);
-        work.setFilePath(cleanedPdf.getAbsolutePath());
-        work.setGenres(genres);
-        work.setStatus(WorkStatus.PENDING);
+            Work work = new Work();
+            work.setTitle(title);
+            work.setAuthor(author);
+            work.setDescription(description);
+            work.setFilePath(cleanedPdf.getAbsolutePath());
+            work.setGenres(genres);
+            work.setStatus(WorkStatus.PENDING);
 
-        Set<Chapter> chapters = new HashSet<>();
-        for (PdfService.ChapterData chData : chaptersData) {
-            Chapter chapter = new Chapter();
-            chapter.setChapterNumber(chData.chapterNumber());
-            chapter.setChapterTitle(chData.title());
-            chapter.setWork(work);
+            Set<Chapter> chapters = new HashSet<>();
+            for (PdfService.ChapterData chData : chaptersData) {
+                Chapter chapter = new Chapter();
+                chapter.setChapterNumber(chData.chapterNumber());
+                chapter.setChapterTitle(chData.title());
+                chapter.setWork(work);
 
-            Set<Chunk> chunks = new HashSet<>();
-            int chunkNum = 1;
-            for (String chunkText : chData.chunks()) {
-                Chunk chunk = new Chunk();
-                chunk.setChunkNumber(chunkNum++);
-                chunk.setText(chunkText);
-                chunk.setType(ChunkType.html);
-                chunk.setChapter(chapter);
-                chunks.add(chunk);
+                Set<Chunk> chunks = new HashSet<>();
+                int chunkNum = 1;
+                for (String chunkText : chData.chunks()) {
+                    Chunk chunk = new Chunk();
+                    chunk.setChunkNumber(chunkNum++);
+                    chunk.setText(chunkText);
+                    chunk.setType(ChunkType.html);
+                    chunk.setChapter(chapter);
+                    chunks.add(chunk);
+                }
+                chapter.setChunks(chunks);
+                chapters.add(chapter);
             }
-            chapter.setChunks(chunks);
-            chapters.add(chapter);
+
+            work.setChapters(chapters);
+
+            return workRepo.save(work);
+        } catch(IllegalArgumentException e){
+            throw new IllegalArgumentException(e.getMessage());
+        } catch(RuntimeException e){
+            throw new RuntimeException(e.getMessage());
+        } catch(Exception e){
+            throw new RuntimeException(e.getMessage());
         }
-
-        work.setChapters(chapters);
-
-        Work saved = workRepo.save(work);
-
-        return saved;
     }
 }

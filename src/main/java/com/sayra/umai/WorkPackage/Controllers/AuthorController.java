@@ -4,6 +4,7 @@ import com.sayra.umai.WorkPackage.DTO.AuthorDTO;
 import com.sayra.umai.WorkPackage.DTO.AuthorInDTO;
 import com.sayra.umai.WorkPackage.Entities.Author;
 import com.sayra.umai.WorkPackage.Services.AuthorService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,6 +29,6 @@ public class AuthorController {
 
     @PostMapping("/create-author")
     public ResponseEntity<Author> createAuthor(@RequestBody AuthorInDTO authorInDTO) {
-        return authorService.save(authorInDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(authorService.save(authorInDTO));
     }
 }
