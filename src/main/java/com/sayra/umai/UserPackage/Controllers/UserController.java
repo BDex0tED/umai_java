@@ -4,14 +4,12 @@ import com.sayra.umai.UserPackage.DTO.JWTResponse;
 import com.sayra.umai.UserPackage.DTO.LoginDTO;
 import com.sayra.umai.UserPackage.DTO.UserDTO;
 import com.sayra.umai.UserPackage.Service.UserService;
+import com.sayra.umai.WorkPackage.DTO.ChangePasswordDTO;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/users")
@@ -37,5 +35,17 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<JWTResponse> login(@RequestBody LoginDTO loginDTO, HttpServletResponse response){
         return ResponseEntity.ok(userService.login(loginDTO, response));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<String> changePassword(@RequestBody ChangePasswordDTO changePasswordDTO){
+        try {
+            userService.changePassword(changePasswordDTO);
+            return ResponseEntity.status(HttpStatus.OK).body("Password changed successfully");
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(e.getMessage());
+        } catch (BadCredentialsException e) {
+            throw new BadCredentialsException(e.getMessage());
+        }
     }
 }

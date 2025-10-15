@@ -35,8 +35,8 @@ public class UmaiController {
     public ResponseEntity<?> uploadWork(
             @RequestParam("file") MultipartFile file,
             @RequestParam("title") String title,
-            @RequestParam("author") Long authorId,
-            @RequestParam(value = "genre", required = false) Set<Long> genresId,
+            @RequestParam("authorId") Long authorId,
+            @RequestParam(value = "genreIds", required = false) Set<Long> genresId,
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "cover", required = false) MultipartFile cover
     ) {

@@ -41,7 +41,7 @@ public class JWTService {
 
         return Jwts.builder()
                 .subject(username)
-                .claim("roles", roles) // Убедитесь, что роли добавляются
+                .claim("roles", roles)
                 .issuedAt(currentDate)
                 .expiration(expirationDate)
                 .signWith(getKey())

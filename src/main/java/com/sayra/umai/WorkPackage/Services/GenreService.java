@@ -41,11 +41,10 @@ public class GenreService {
         }
         genreRepo.deleteById(genreId);
     }
-
     @Transactional
     public void fillDbWithGenres(){
         Set<String> genreNamesToAdd = new HashSet<>(Arrays.asList(
-                "Эпос", "Роман", "Согуш", "Аңгеме", "Повесть", "Кыргыз классика"
+                "Эпос", "Роман", "Согуш", "Аңгеме", "Повесть", "Кыргыз классика","Тарыхый роман"
         ));
         Set<String> existingGenres = genreRepo.findAll().stream().map(Genre::getName).collect(Collectors.toSet());
         genreNamesToAdd.removeAll(existingGenres);

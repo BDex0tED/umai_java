@@ -13,12 +13,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Set;
 
-@Data
 @RestController()
 @RequestMapping("/genre")
-//add a method which will run and fill in the genres in the db
 public class GenreController {
-    private GenreService genreService;
+    private final GenreService genreService;
     public GenreController(GenreService genreService) {
         this.genreService = genreService;
     }
@@ -40,13 +38,6 @@ public class GenreController {
     public ResponseEntity<String> deleteGenre(@PathVariable Long id){
         genreService.deleteGenre(id);
 
-        return ResponseEntity.ok("Genre deleted successfully");
-    }
-
-    @Bean
-    public CommandLineRunner fillDbWithGenres(GenreService genreService) {
-        return args -> {
-            genreService.fillDbWithGenres();
-        };
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(null);
     }
 }
