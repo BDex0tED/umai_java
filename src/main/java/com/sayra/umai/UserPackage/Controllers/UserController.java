@@ -5,6 +5,7 @@ import com.sayra.umai.UserPackage.DTO.LoginDTO;
 import com.sayra.umai.UserPackage.DTO.UserDTO;
 import com.sayra.umai.UserPackage.Service.UserService;
 import com.sayra.umai.WorkPackage.DTO.ChangePasswordDTO;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,4 +49,16 @@ public class UserController {
             throw new BadCredentialsException(e.getMessage());
         }
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(HttpServletResponse response){
+        userService.logout(response);
+        return ResponseEntity.ok("Logout successfully");
+    }
+
+    @PostMapping("/refresh-token")
+    public ResponseEntity<JWTResponse> refreshToken(HttpServletRequest request, HttpServletResponse response) throws BadCredentialsException, Exception{
+        return ResponseEntity.ok(userService.refreshToken(request, response));
+    }
+
 }

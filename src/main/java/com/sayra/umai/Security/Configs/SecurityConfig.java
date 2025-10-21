@@ -16,6 +16,11 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -36,16 +41,30 @@ public class SecurityConfig {
         return http.csrf(AbstractHttpConfigurer::disable).
                 authorizeHttpRequests(request -> request
                         .requestMatchers(
-                                "/api/users/**",
+                                "/api/users/register",
+                                "/api/users/login",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()).
-                httpBasic(Customizer.withDefaults()).
                 sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration cfg = new CorsConfiguration();
+        cfg.setAllowedOrigins(List.of("*"));
+        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        cfg.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        cfg.setExposedHeaders(List.of("Authorization"));
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", cfg);
+        return source;
+    }
+
+
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);

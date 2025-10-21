@@ -10,6 +10,8 @@ import com.sayra.umai.UserPackage.Repo.RoleRepo;
 import com.sayra.umai.UserPackage.Repo.UserEntityRepo;
 import com.sayra.umai.WorkPackage.DTO.ChangePasswordDTO;
 import com.sayra.umai.WorkPackage.Other.UserAlreadyExistsException;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -19,12 +21,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 
-import java.security.Principal;
 import java.time.Duration;
 import java.util.*;
 
@@ -98,20 +98,20 @@ public class UserService {
             String refreshToken = jwtService.generateRefreshToken(authentication);
             ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
                     .httpOnly(true)
-                    .secure(isProduction)               // true в проде с HTTPS
-                    .path("/")                  // путь, где cookie доступна
-                    .sameSite(isProduction ? "Strict" : "Lax")         // либо "Lax" в зависимости от фронта
+                    .secure(isProduction)        // true в проде с HTTPS
+                    .path("/api/users")                  // путь, где cookie доступна
+                    .sameSite(isProduction ? "Strict" : "Lax") // либо "Lax" в зависимости от фронта
                     .maxAge(Duration.ofDays(7))
                     .build();
             response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
 
-            return new JWTResponse(accessToken, null);
+            return new JWTResponse(accessToken);
         } catch (AuthenticationException e){
             throw new BadCredentialsException("Invalid username or password");
         }
 
     }
-    public ChangePasswordDTO changePassword(ChangePasswordDTO changePasswordDTO){
+    public void changePassword(ChangePasswordDTO changePasswordDTO){
         if(changePasswordDTO.getOldPassword() == null || changePasswordDTO.getNewPassword() == null){
             throw new IllegalArgumentException("Invalid old password or new password");
         }if(changePasswordDTO.getOldPassword().equals(changePasswordDTO.getNewPassword())){
@@ -129,9 +129,58 @@ public class UserService {
         }
         userEntity.setPassword(encoder.encode(changePasswordDTO.getNewPassword()));
         userEntityRepo.save(userEntity);
-        return changePasswordDTO;
+    }
+    public void logout(HttpServletResponse response){
+        Cookie cookie = new Cookie("refreshToken", null);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(isProduction);
+        cookie.setPath("/api/users");
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+    }
+    public JWTResponse refreshToken(HttpServletRequest request,
+                                    HttpServletResponse response){
+        try{
+            String refreshToken = getRefreshTokenFromCookie(request);
+            if(refreshToken == null){
+                throw new BadCredentialsException("Invalid refresh token");
+            }
+            String username = jwtService.extractUserName(refreshToken);
+            if(username == null || jwtService.isTokenExpired(refreshToken)){
+                throw new BadCredentialsException("Invalid refresh token");
+            }
+            Authentication authentication = new UsernamePasswordAuthenticationToken(username, null, null);
+
+            String newAccessToken = jwtService.generateToken(authentication);
+            String newRefreshToken = jwtService.generateRefreshToken(authentication);
+            ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", newRefreshToken)
+                    .httpOnly(true)
+                    .secure(isProduction)
+                    .path("/api/users")
+                    .sameSite(isProduction ? "Strict" : "Lax")
+                    .maxAge(Duration.ofDays(7))
+                    .build();
+            response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
+            return new JWTResponse(newAccessToken);
+
+        } catch(Exception e){
+            throw new BadCredentialsException("Invalid refresh token");
+        }
+
     }
 
-    public
+
+    private String getRefreshTokenFromCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("refreshToken".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
+    }
+
 
 }

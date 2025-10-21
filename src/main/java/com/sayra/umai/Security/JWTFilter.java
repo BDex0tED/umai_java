@@ -1,6 +1,7 @@
 package com.sayra.umai.Security;
 
 import com.sayra.umai.Security.Service.JWTService;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -19,34 +21,55 @@ import java.io.IOException;
 @Component
 public class JWTFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JWTService jwtService;
-
-    @Autowired
+    private final JWTService jwtService;
     ApplicationContext context;
+    MeninUserDetailsService meninUserDetailsService;
+
+    public JWTFilter(JWTService jwtService, ApplicationContext context, MeninUserDetailsService meninUserDetailsService) {
+        this.jwtService = jwtService;
+        this.context = context;
+        this.meninUserDetailsService = meninUserDetailsService;
+    }
+
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-//  Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJraWxsIiwiaWF0IjoxNzIzMTgzNzExLCJleHAiOjE3MjMxODM4MTl9.5nf7dRzKRiuGurN2B9dHh_M5xiu73ZzWPr6rbhOTTHs
-        String authHeader = request.getHeader("Authorization");
-        String token = null;
-        String username = null;
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+        try {
+            String authHeader = request.getHeader("Authorization");
+            String token = null;
+            String username = null;
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7);
-            username = jwtService.extractUserName(token);
-        }
+            if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
+                token = authHeader.substring(7);
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = context.getBean(MeninUserDetailsService.class).loadUserByUsername(username);
-            if (jwtService.validateToken(token, userDetails)) {
-                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource()
-                        .buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                if (StringUtils.hasText(token)) {
+                    username = jwtService.extractUserName(token);
+                }
             }
+
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = meninUserDetailsService.loadUserByUsername(username);
+
+                if (jwtService.validateToken(token, userDetails)) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                }
+            }
+
+        } catch (Exception e) {
+            logger.error("Error while processing JWT: " + e.getMessage(), e);
         }
 
         filterChain.doFilter(request, response);
     }
+
+
 }
