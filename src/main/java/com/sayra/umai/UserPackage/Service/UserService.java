@@ -10,9 +10,11 @@ import com.sayra.umai.UserPackage.Repo.RoleRepo;
 import com.sayra.umai.UserPackage.Repo.UserEntityRepo;
 import com.sayra.umai.WorkPackage.DTO.ChangePasswordDTO;
 import com.sayra.umai.WorkPackage.Other.UserAlreadyExistsException;
+import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,9 +27,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 
+@Slf4j
 @Service
 public class UserService {
     final AuthenticationManager authManager;
@@ -89,7 +93,7 @@ public class UserService {
         userDTO.setPassword(null);
         return userDTO;
     }
-    public JWTResponse login(LoginDTO loginDTO, HttpServletResponse response){
+    public JWTResponse login(LoginDTO loginDTO, HttpServletResponse response) {
         try{
             Authentication authentication = authManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginDTO.getUsername(), loginDTO.getPassword())
@@ -131,7 +135,7 @@ public class UserService {
         userEntityRepo.save(userEntity);
     }
     public void logout(HttpServletResponse response){
-        Cookie cookie = new Cookie("refreshToken", null);
+        Cookie cookie = new Cookie("refresh_token", null);
         cookie.setHttpOnly(true);
         cookie.setSecure(isProduction);
         cookie.setPath("/api/users");
@@ -143,10 +147,12 @@ public class UserService {
         try{
             String refreshToken = getRefreshTokenFromCookie(request);
             if(refreshToken == null){
-                throw new BadCredentialsException("Invalid refresh token");
+                log.warn("Refresh token is null");
+                throw new BadCredentialsException("Refresh token is missing");
             }
             String username = jwtService.extractUserName(refreshToken);
             if(username == null || jwtService.isTokenExpired(refreshToken)){
+                log.warn("Refresh attempt failed for user={} from IP={}", username, request.getRemoteAddr());
                 throw new BadCredentialsException("Invalid refresh token");
             }
             Authentication authentication = new UsernamePasswordAuthenticationToken(username, null, null);
@@ -174,7 +180,7 @@ public class UserService {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
-                if ("refreshToken".equals(cookie.getName())) {
+                if ("refresh_token".equals(cookie.getName())) {
                     return cookie.getValue();
                 }
             }

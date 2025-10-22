@@ -9,6 +9,8 @@ import com.sayra.umai.WorkPackage.Entities.Work;
 import com.sayra.umai.WorkPackage.Repos.BookmarkRepo;
 import com.sayra.umai.WorkPackage.Repos.ChapterRepo;
 import com.sayra.umai.WorkPackage.Repos.WorkRepo;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.attribute.UserPrincipalNotFoundException;
@@ -54,12 +56,40 @@ public class BookmarkService {
     public List<BookmarkInDTO> getAllBookmarks(Principal principal) throws UserPrincipalNotFoundException {
         UserEntity user = userRepo.findByUsername(principal.getName()).orElseThrow(()->new UserPrincipalNotFoundException("User with id" + principal.getName() + " not found"));
         List<Bookmark> bookmarks = bookmarkRepo.findAllByUser(user);
+        if(bookmarks.isEmpty()){
+            throw new EntityNotFoundException("User has no bookmarks");
+        }
         List<BookmarkInDTO> bookmarkInDTOS = new ArrayList<>();
         for(Bookmark bookmark : bookmarks){
             BookmarkInDTO bookmarkInDTO = getBookmarkInDTO(bookmark);
             bookmarkInDTOS.add(bookmarkInDTO);
         }
         return bookmarkInDTOS;
+    }
+
+    public BookmarkInDTO getBookmark(Long id, Principal principal) throws UserPrincipalNotFoundException {
+        UserEntity user = userRepo.findByUsername(principal.getName()).orElseThrow(()->new UserPrincipalNotFoundException("User not found"));
+
+        Bookmark bookmark = bookmarkRepo.findByIdAndUser(id, user).orElseThrow(()->new EntityNotFoundException("Bookmark with id: "+id+" not found"));
+
+        return getBookmarkInDTO(bookmark);
+
+    }
+
+    public void deleteBookmark(Long id, Principal principal) throws UserPrincipalNotFoundException {
+        UserEntity user = userRepo.findByUsername(principal.getName()).orElseThrow(()->new UserPrincipalNotFoundException("User not found"));
+        Bookmark bookmark = bookmarkRepo.findByIdAndUser(id, user).orElseThrow(()->new EntityNotFoundException("Bookmark with id: "+id+" not found"));
+        bookmarkRepo.delete(bookmark);
+    }
+
+    @Transactional
+    public void deleteAllBookmarks(Principal principal) throws UserPrincipalNotFoundException {
+        UserEntity user = userRepo.findByUsername(principal.getName()).orElseThrow(()->new UserPrincipalNotFoundException("User not found"));
+        List<Bookmark> bookmarks = bookmarkRepo.findAllByUser(user);
+        if(bookmarks.isEmpty()){
+            throw new EntityNotFoundException("User has no bookmarks");
+        }
+        bookmarkRepo.deleteAll(bookmarks);
     }
 
     private static BookmarkInDTO getBookmarkInDTO(Bookmark bookmark) {

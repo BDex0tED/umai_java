@@ -25,4 +25,23 @@ public class BookmarkController {
         return ResponseEntity.ok(bookmarkService.getAllBookmarks(principal));
     }
 
+    @GetMapping("/get/{id}")
+    public ResponseEntity<BookmarkInDTO> getBookmark(@PathVariable Long id, Principal principal) throws UserPrincipalNotFoundException, IllegalArgumentException {
+        return ResponseEntity.ok(bookmarkService.getBookmark(id, principal));
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<String> deleteBookmark(@PathVariable Long id, Principal principal) throws UserPrincipalNotFoundException, IllegalArgumentException {
+        bookmarkService.deleteBookmark(id, principal);
+        return ResponseEntity.ok("Bookmark deleted successfully");
+    }
+
+    @DeleteMapping("/delete-all")
+    public ResponseEntity<String> deleteAllBookmarks(Principal principal) throws UserPrincipalNotFoundException, IllegalArgumentException {
+        bookmarkService.deleteAllBookmarks(principal);
+        return ResponseEntity.ok("All bookmarks deleted successfully");
+    }
+
+
+
 }
