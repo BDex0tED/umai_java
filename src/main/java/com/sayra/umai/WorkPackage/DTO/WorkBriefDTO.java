@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.net.URL;
 
 @Data
 @AllArgsConstructor
@@ -12,5 +11,5 @@ import java.net.URL;
 public class WorkBriefDTO {
     private Long id;
     private String title;
-    private URL coverUrl;
+    private String coverUrl;
 }

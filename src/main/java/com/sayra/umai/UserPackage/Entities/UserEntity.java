@@ -27,6 +27,9 @@ public class UserEntity {
     @Column(nullable = false)
     private String email;
 
+    @Column(name = "profile_photo_url")
+    private String profilePhotoUrl;
+
     //email verification
 //    @Column(name = "verification_code", length = 64)
 //    private String verificationCode;

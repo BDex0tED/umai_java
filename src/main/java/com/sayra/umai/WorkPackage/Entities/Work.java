@@ -6,7 +6,6 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -42,7 +41,7 @@ public class Work {
 
     private String filepath;
 
-    private URL coverUrl;
+    private String coverUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

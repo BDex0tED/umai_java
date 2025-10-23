@@ -1,5 +1,6 @@
 package com.sayra.umai.UserPackage.Service;
 
+import com.sayra.umai.Dropbox.Service.DropboxService;
 import com.sayra.umai.Security.Service.JWTService;
 import com.sayra.umai.UserPackage.DTO.JWTResponse;
 import com.sayra.umai.UserPackage.DTO.LoginDTO;
@@ -26,6 +27,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -39,6 +41,7 @@ public class UserService {
     private final PasswordEncoder encoder;
     private final UserEntityRepo userEntityRepo;
     private final RoleRepo roleRepo;
+    private final DropboxService dropboxService;
 
     @Value( "${umai.app.isproduction}")
     private boolean isProduction;
@@ -47,12 +50,14 @@ public class UserService {
                        JWTService jwtService,
                        AuthenticationManager authManager,
                        PasswordEncoder encoder,
-                       RoleRepo roleRepo) {
+                       RoleRepo roleRepo,
+                       DropboxService dropboxService) {
         this.userEntityRepo = userEntityRepo;
         this.jwtService = jwtService;
         this.authManager = authManager;
         this.encoder = encoder;
         this.roleRepo = roleRepo;
+        this.dropboxService = dropboxService;
     }
 
     public UserEntity getCurrentUser(){
@@ -184,6 +189,90 @@ public class UserService {
                     return cookie.getValue();
                 }
             }
+        }
+        return null;
+    }
+
+    /**
+     * Загружает фото профиля пользователя в Dropbox
+     * @param profilePhoto файл фото профиля
+     * @return URL загруженного фото
+     */
+    public String uploadProfilePhoto(MultipartFile profilePhoto) {
+        UserEntity currentUser = getCurrentUser();
+        
+        if (profilePhoto == null || profilePhoto.isEmpty()) {
+            throw new IllegalArgumentException("Profile photo is required");
+        }
+
+        try {
+            // Удаляем старое фото, если оно есть
+            if (currentUser.getProfilePhotoUrl() != null && !currentUser.getProfilePhotoUrl().isEmpty()) {
+                deleteProfilePhoto();
+            }
+
+            // Загружаем новое фото в Dropbox
+            String photoUrl = dropboxService.uploadFile(profilePhoto, "profiles/" + currentUser.getUsername());
+            currentUser.setProfilePhotoUrl(photoUrl);
+            userEntityRepo.save(currentUser);
+            
+            return photoUrl;
+        } catch (Exception e) {
+            throw new RuntimeException("Ошибка при загрузке фото профиля в Dropbox: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Удаляет фото профиля пользователя
+     */
+    public void deleteProfilePhoto() {
+        UserEntity currentUser = getCurrentUser();
+        
+        if (currentUser.getProfilePhotoUrl() != null && !currentUser.getProfilePhotoUrl().isEmpty()) {
+            try {
+                // Извлекаем путь к файлу из URL для удаления из Dropbox
+                String filePath = extractFilePathFromUrl(currentUser.getProfilePhotoUrl());
+                if (filePath != null) {
+                    dropboxService.deleteFile(filePath);
+                }
+            } catch (Exception e) {
+                // Логируем ошибку, но не прерываем выполнение
+                log.error("Ошибка при удалении фото профиля из Dropbox: {}", e.getMessage());
+            }
+        }
+
+        currentUser.setProfilePhotoUrl(null);
+        userEntityRepo.save(currentUser);
+    }
+
+    /**
+     * Получает информацию о текущем пользователе с фото профиля
+     * @return UserDTO с информацией о пользователе
+     */
+    public UserDTO getCurrentUserInfo() {
+        UserEntity currentUser = getCurrentUser();
+        UserDTO userDTO = new UserDTO();
+        userDTO.setUsername(currentUser.getUsername());
+        userDTO.setEmail(currentUser.getEmail());
+        userDTO.setProfilePhotoUrl(currentUser.getProfilePhotoUrl());
+        return userDTO;
+    }
+
+    /**
+     * Извлекает путь к файлу из Dropbox URL
+     * @param url URL файла в Dropbox
+     * @return путь к файлу или null если не удалось извлечь
+     */
+    private String extractFilePathFromUrl(String url) {
+        try {
+            // URL выглядит как: https://www.dropbox.com/s/.../filename?raw=1
+            // Нужно извлечь путь к файлу
+            if (url.contains("dropbox.com")) {
+                // Простое извлечение - в реальном проекте может потребоваться более сложная логика
+                return null; // Пока возвращаем null, так как для удаления нужен точный путь
+            }
+        } catch (Exception e) {
+            log.error("Ошибка при извлечении пути из URL: {}", e.getMessage());
         }
         return null;
     }
