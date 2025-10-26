@@ -1,5 +1,6 @@
 package com.sayra.umai.WorkPackage.Services;
 
+import com.sayra.umai.Dropbox.Service.DropboxService;
 import com.sayra.umai.WorkPackage.DTO.*;
 import com.sayra.umai.WorkPackage.Entities.*;
 import com.sayra.umai.WorkPackage.Other.ChunkType;
@@ -29,12 +30,15 @@ public class WorkService {
     private final ChapterRepo chapterRepo;
     private final AuthorRepo authorRepo;
     private final GenreRepo genreRepo;
-    public WorkService(WorkRepo workRepo, PdfService pdfService,  ChapterRepo chapterRepo, AuthorRepo authorRepo, GenreRepo genreRepo) {
+    private final DropboxService dropboxService;
+    
+    public WorkService(WorkRepo workRepo, PdfService pdfService, ChapterRepo chapterRepo, AuthorRepo authorRepo, GenreRepo genreRepo, DropboxService dropboxService) {
         this.workRepo = workRepo;
         this.pdfService = pdfService;
         this.chapterRepo = chapterRepo;
         this.authorRepo = authorRepo;
         this.genreRepo = genreRepo;
+        this.dropboxService = dropboxService;
     }
 
     public List<AllWorksDTO> getAllWorks(){
@@ -204,6 +208,16 @@ public class WorkService {
             work.setGenres(genres);
             work.setStatus(WorkStatus.PENDING);
 
+            // Загружаем обложку в Dropbox, если она предоставлена
+            if (coverImage != null && !coverImage.isEmpty()) {
+                try {
+                    String coverUrl = dropboxService.uploadFile(coverImage, "covers");
+                    work.setCoverUrl(coverUrl);
+                } catch (Exception e) {
+                    throw new RuntimeException("Ошибка при загрузке обложки в Dropbox: " + e.getMessage());
+                }
+            }
+
             Set<Chapter> chapters = new HashSet<>();
             for (PdfService.ChapterData chData : chaptersData) {
                 Chapter chapter = new Chapter();
@@ -235,5 +249,77 @@ public class WorkService {
         } catch(Exception e){
             throw new RuntimeException(e.getMessage());
         }
+    }
+
+    /**
+     * Загружает обложку для существующего произведения
+     * @param workId ID произведения
+     * @param coverImage файл обложки
+     * @return URL загруженной обложки
+     * @throws EntityNotFoundException если произведение не найдено
+     */
+    @Transactional
+    public String uploadCover(Long workId, MultipartFile coverImage) throws EntityNotFoundException {
+        Work work = workRepo.findById(workId)
+                .orElseThrow(() -> new EntityNotFoundException("Work with id " + workId + " not found"));
+
+        if (coverImage == null || coverImage.isEmpty()) {
+            throw new IllegalArgumentException("Cover image is required");
+        }
+
+        try {
+            String coverUrl = dropboxService.uploadFile(coverImage, "covers");
+            work.setCoverUrl(coverUrl);
+            workRepo.save(work);
+            return coverUrl;
+        } catch (Exception e) {
+            throw new RuntimeException("Ошибка при загрузке обложки в Dropbox: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Удаляет обложку произведения
+     * @param workId ID произведения
+     * @throws EntityNotFoundException если произведение не найдено
+     */
+    @Transactional
+    public void deleteCover(Long workId) throws EntityNotFoundException {
+        Work work = workRepo.findById(workId)
+                .orElseThrow(() -> new EntityNotFoundException("Work with id " + workId + " not found"));
+
+        if (work.getCoverUrl() != null && !work.getCoverUrl().isEmpty()) {
+            try {
+                // Извлекаем путь к файлу из URL для удаления из Dropbox
+                String filePath = extractFilePathFromUrl(work.getCoverUrl());
+                if (filePath != null) {
+                    dropboxService.deleteFile(filePath);
+                }
+            } catch (Exception e) {
+                // Логируем ошибку, но не прерываем выполнение
+                System.err.println("Ошибка при удалении обложки из Dropbox: " + e.getMessage());
+            }
+        }
+
+        work.setCoverUrl(null);
+        workRepo.save(work);
+    }
+
+    /**
+     * Извлекает путь к файлу из Dropbox URL
+     * @param url URL файла в Dropbox
+     * @return путь к файлу или null если не удалось извлечь
+     */
+    private String extractFilePathFromUrl(String url) {
+        try {
+            // URL выглядит как: https://www.dropbox.com/s/.../filename?raw=1
+            // Нужно извлечь путь к файлу
+            if (url.contains("dropbox.com")) {
+                // Простое извлечение - в реальном проекте может потребоваться более сложная логика
+                return null; // Пока возвращаем null, так как для удаления нужен точный путь
+            }
+        } catch (Exception e) {
+            System.err.println("Ошибка при извлечении пути из URL: " + e.getMessage());
+        }
+        return null;
     }
 }

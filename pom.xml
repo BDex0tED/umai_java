@@ -107,6 +107,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Dropbox SDK for file storage -->
+        <dependency>
+            <groupId>com.dropbox.core</groupId>
+            <artifactId>dropbox-core-sdk</artifactId>
+            <version>5.4.0</version>
+        </dependency>
+
 <!--        пока что верификация имейла отложена-->
 <!--        &lt;!&ndash; https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-mail &ndash;&gt;-->
 <!--        <dependency>-->
