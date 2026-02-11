@@ -50,7 +50,7 @@ public interface WorkRepo extends JpaRepository<Work, Long> {
                            WHERE wg2.work_id = w.id AND wg2.genre_id = ANY(CAST(:genreIds AS bigint[]))
                       )
                 )
-                -- Используем COALESCE: если :createdFrom/To NULL, используем w.created_at (по сути, не фильтруем)
+                - Используем COALESCE: если :createdFrom/To NULL, используем w.created_at (по сути, не фильтруем)
                 AND w.created_at >= COALESCE(CAST(:createdFrom AS timestamp), w.created_at)
                 AND w.created_at <= COALESCE(CAST(:createdTo AS timestamp), w.created_at)
               GROUP BY w.id
