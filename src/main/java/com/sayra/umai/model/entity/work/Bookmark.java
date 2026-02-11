@@ -2,9 +2,7 @@ package com.sayra.umai.model.entity.work;
 
 import com.sayra.umai.model.entity.user.UserEntity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.Instant;
 
@@ -20,10 +18,13 @@ import java.time.Instant;
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 public class Bookmark {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @ToString.Include
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -39,6 +40,7 @@ public class Bookmark {
     private Chapter chapter;
 
     @Column(name="chunk_id", nullable = false)
+    @ToString.Include
     private Long chunkId;
 
     @Column(name="user_note", columnDefinition = "TEXT")
@@ -48,15 +50,19 @@ public class Bookmark {
     private String workNote;
 
     @Column(name="start_offset", nullable = false)
+    @ToString.Include
     private Integer startOffset;
     @Column(name="end_offset", nullable = false)
+    @ToString.Include
     private Integer endOffset;
 
     @Column(name="created_at", nullable = false,updatable = false)
+    @ToString.Include
     private Instant created_at;
 
     @PrePersist
-    void onCreate(){
+    void onCreate() {
+        validateOffsets();
         this.created_at = Instant.now();
     }
 
@@ -67,5 +73,10 @@ public class Bookmark {
         if (startOffset == null || endOffset == null || startOffset < 0 || endOffset <= startOffset) {
             throw new IllegalArgumentException("Invalid diapason of offsets");
         }
+    }
+
+    @ToString.Include(name = "workId")
+    public Long getWorkIdForLog() {
+        return work != null ? work.getId() : null;
     }
 }

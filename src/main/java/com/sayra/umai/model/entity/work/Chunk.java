@@ -2,11 +2,11 @@ package com.sayra.umai.model.entity.work;
 
 import com.sayra.umai.model.dto.ChunkType;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.*;
 
 @Entity
-@Data
+@Getter
+@Setter
 public class Chunk {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,8 +20,7 @@ public class Chunk {
     @Column(nullable = false, columnDefinition = "text")
     private String text;
 
-    @EqualsAndHashCode.Exclude
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="chapter_id",  nullable = false)
     private Chapter chapter;
 }

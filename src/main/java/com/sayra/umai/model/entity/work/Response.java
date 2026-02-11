@@ -1,12 +1,16 @@
 package com.sayra.umai.model.entity.work;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Data
+@Getter
+@Setter
+@ToString
 @Table(name="response")
 public class Response {
     @Id
@@ -14,12 +18,11 @@ public class Response {
     private Long id;
 
     @Column(columnDefinition = "TEXT", nullable = false)
-    private String response_User;
+    private String responseUser;
 
     @Column(columnDefinition ="TEXT", nullable=false)
-    private String response_AI;
+    private String responseAI;
 
-    @Column(columnDefinition = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
-    private LocalDateTime created_at;
-
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

@@ -1,31 +1,36 @@
 package com.sayra.umai.model.entity.work;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Data
+@Getter
+@Setter
+@ToString(onlyExplicitlyIncluded = true)
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name="messages")
 public class Message {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @ToString.Include
     private Long id;
 
     @Column(nullable = false, columnDefinition = "TEXT")
+    @ToString.Include
     private String content;
 
     @Column(nullable = false)
+    @ToString.Include
     private String sender;
 
-    private LocalDateTime created_at;
+    @Column(nullable = false, updatable = false)
+    @ToString.Include
+    private LocalDateTime createdAt = LocalDateTime.now();
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="chat_session_id", nullable = false)
     private ChatSession chatSession;
 
