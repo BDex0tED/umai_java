@@ -24,7 +24,7 @@ import java.util.*;
 import static com.sayra.umai.service.impl.PdfServiceImpl.*;
 
 @Service
-public class PdfTextServiceImpl implements PdfTextService {
+public class  PdfTextServiceImpl implements PdfTextService {
   @Override
   public List<ChapterData> extractFromOutline(PDDocument document, PDDocumentOutline outline) throws IOException {
     List<PdfServiceImpl.ChapterData> chapters = new ArrayList<>();
@@ -138,29 +138,25 @@ public class PdfTextServiceImpl implements PdfTextService {
       String paraHtml = "<p>" + escapeHtml(p).replace("\n", "<br/>") + "</p>";
       byte[] paraBytes = paraHtml.getBytes(StandardCharsets.UTF_8);
 
+      // ✅ If single paragraph is too large, split it smartly
       if (paraBytes.length > maxBytes) {
         if (current.length() > 0) {
           chunks.add(current.toString());
           current.setLength(0);
           currentBytes = 0;
         }
-        int start = 0;
-        int len = p.length();
-        while (start < len) {
-          int approxChars = Math.max(1, (int) (maxBytes / 2));
-          int end = Math.min(len, start + approxChars);
-          String piece = p.substring(start, end);
-          String pieceHtml = "<p>" + escapeHtml(piece) + "</p>";
-          chunks.add(pieceHtml);
-          start = end;
-        }
+        
+        // ✅ Split large paragraph at word/sentence boundaries
+        chunks.addAll(splitLargeParagraph(p, maxBytes));
         continue;
       }
 
+      // ✅ Add paragraph to current chunk if it fits
       if (currentBytes + paraBytes.length <= maxBytes) {
         current.append(paraHtml).append("\n");
         currentBytes += paraBytes.length;
       } else {
+        // Save current chunk and start new one
         if (current.length() > 0) {
           chunks.add(current.toString());
         }
@@ -173,7 +169,101 @@ public class PdfTextServiceImpl implements PdfTextService {
     if (current.length() > 0) chunks.add(current.toString());
     return chunks;
   }
-  @Override
+
+  /**
+   * ✅ Splits a large paragraph into chunks respecting word boundaries
+   */
+  private List<String> splitLargeParagraph(String paragraph, int maxBytes) {
+    List<String> chunks = new ArrayList<>();
+    
+    // Try to split by sentences first
+    String[] sentences = paragraph.split("(?<=[.!?។।।])\\s+");
+    
+    StringBuilder currentChunk = new StringBuilder();
+    int currentBytes = 0;
+    
+    for (String sentence : sentences) {
+      String sentenceHtml = escapeHtml(sentence);
+      byte[] sentenceBytes = sentenceHtml.getBytes(StandardCharsets.UTF_8);
+      
+      // If single sentence is too big, split by words
+      if (sentenceBytes.length > maxBytes) {
+        if (currentChunk.length() > 0) {
+          chunks.add("<p>" + currentChunk.toString().trim() + "</p>");
+          currentChunk.setLength(0);
+          currentBytes = 0;
+        }
+        chunks.addAll(splitByWords(sentence, maxBytes));
+        continue;
+      }
+      
+      // Add sentence to current chunk if it fits
+      if (currentBytes + sentenceBytes.length <= maxBytes) {
+        currentChunk.append(sentenceHtml).append(" ");
+        currentBytes += sentenceBytes.length + 1;
+      } else {
+        // Save current chunk and start new one
+        if (currentChunk.length() > 0) {
+          chunks.add("<p>" + currentChunk.toString().trim() + "</p>");
+        }
+        currentChunk.setLength(0);
+        currentChunk.append(sentenceHtml).append(" ");
+        currentBytes = sentenceBytes.length + 1;
+      }
+    }
+    
+    if (currentChunk.length() > 0) {
+      chunks.add("<p>" + currentChunk.toString().trim() + "</p>");
+    }
+    
+    return chunks;
+  }
+
+  /**
+   * ✅ Splits text by words when sentences are too large
+   */
+  private List<String> splitByWords(String text, int maxBytes) {
+    List<String> chunks = new ArrayList<>();
+    String[] words = text.split("\\s+");
+    
+    StringBuilder currentChunk = new StringBuilder();
+    int currentBytes = 0;
+    
+    for (String word : words) {
+      String escapedWord = escapeHtml(word);
+      byte[] wordBytes = (escapedWord + " ").getBytes(StandardCharsets.UTF_8);
+      
+      // If single word is impossibly large, split it (rare case)
+      if (wordBytes.length > maxBytes) {
+        if (currentChunk.length() > 0) {
+          chunks.add("<p>" + currentChunk.toString().trim() + "</p>");
+          currentChunk.setLength(0);
+          currentBytes = 0;
+        }
+        // Last resort: split word itself
+        chunks.add("<p>" + escapedWord + "</p>");
+        continue;
+      }
+      
+      if (currentBytes + wordBytes.length <= maxBytes) {
+        currentChunk.append(escapedWord).append(" ");
+        currentBytes += wordBytes.length;
+      } else {
+        if (currentChunk.length() > 0) {
+          chunks.add("<p>" + currentChunk.toString().trim() + "</p>");
+        }
+        currentChunk.setLength(0);
+        currentChunk.append(escapedWord).append(" ");
+        currentBytes = wordBytes.length;
+      }
+    }
+    
+    if (currentChunk.length() > 0) {
+      chunks.add("<p>" + currentChunk.toString().trim() + "</p>");
+    }
+    
+    return chunks;
+  }
   @NotNull
   public String cleanText(String text) {
     StringBuilder sb = new StringBuilder();

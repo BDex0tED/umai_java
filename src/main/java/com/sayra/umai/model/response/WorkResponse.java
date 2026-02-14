@@ -17,8 +17,8 @@ public class WorkResponse {
     private String title;
     private String description;
     private AuthorResponse author;
-    private Set<GenreDTO> genres;
-    private Set<ChapterResponse> chapters;
+    private List<GenreDTO> genres;
+    private List<ChapterResponse> chapters;
     private String coverUrl;
     private List<OtherWorksByAuthorResponse> otherWorks;
 

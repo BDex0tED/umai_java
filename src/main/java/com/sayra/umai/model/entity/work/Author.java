@@ -24,7 +24,7 @@ public class Author {
     @ToString.Include
     private String name;
 
-    @Column(nullable = false)
+    @Column()
     private String date;
 
     @Column()

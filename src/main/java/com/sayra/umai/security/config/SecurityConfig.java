@@ -39,13 +39,13 @@ public class SecurityConfig {
 
         return http.csrf(AbstractHttpConfigurer::disable).
                 authorizeHttpRequests(request -> request
-                        .requestMatchers(
-                                "/api/users/register",
-                                "/api/users/login",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html",
-                                "/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated()).
+//                        .requestMatchers(
+//                                "/api/users/register",
+//                                "/api/users/login",
+//                                "/swagger-ui/**",
+//                                "/swagger-ui.html",
+//                                "/v3/api-docs/**").permitAll()
+                        .anyRequest().permitAll()).
                 sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

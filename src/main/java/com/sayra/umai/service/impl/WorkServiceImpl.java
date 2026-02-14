@@ -11,6 +11,12 @@
   import com.sayra.umai.model.dto.WorkStatus;
   import com.sayra.umai.service.*;
   import jakarta.persistence.EntityNotFoundException;
+  import lombok.AllArgsConstructor;
+  import lombok.NoArgsConstructor;
+  import lombok.RequiredArgsConstructor;
+  import lombok.extern.slf4j.Slf4j;
+  import org.slf4j.Logger;
+  import org.slf4j.LoggerFactory;
   import org.springframework.stereotype.Service;
   import org.springframework.transaction.annotation.Transactional;
   import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +28,8 @@
   import java.util.stream.Collectors;
 
   @Service
+  @RequiredArgsConstructor
+  @Slf4j
   public class WorkServiceImpl implements WorkService {
       private final WorkDataService workDataService;
       private final AuthorDataService authorDataService;
@@ -31,22 +39,6 @@
       private final PdfService pdfService;
       private final PdfTextService pdfTextService;
       private final DropboxService dropboxService;
-
-      public WorkServiceImpl(PdfService pdfService,
-                             DropboxService dropboxService,
-                             WorkDataService workDataService,
-                             AuthorDataService authorDataService,
-                             GenreDataService genreDataService,
-                             WorkMapper workMapper,
-                             PdfTextService pdfTextService) {
-         this.workDataService = workDataService;
-         this.authorDataService = authorDataService;
-         this.genreDataService = genreDataService;
-         this.workMapper = workMapper;
-         this.pdfService = pdfService;
-         this.dropboxService = dropboxService;
-         this.pdfTextService = pdfTextService;
-      }
 
       @Override
       @Transactional(readOnly=true)
@@ -92,6 +84,8 @@
 
           Map<Long, Integer> order = new HashMap<>();
           for (int i = 0; i < ids.size(); i++) order.put(ids.get(i), i);
+
+          log.info("Found {} works for query '{}'", works.size(), query);
 
           return works.stream()
                   .sorted(Comparator.comparingInt(w -> order.getOrDefault(w.getId(), Integer.MAX_VALUE)))
@@ -148,8 +142,11 @@
                   try {
                       String coverUrl = dropboxService.uploadFile(coverImage, "covers");
                       work.setCoverUrl(coverUrl);
-                  } catch (Exception e) {
-                      throw new RuntimeException("Ошибка при загрузке обложки в Dropbox: " + e.getMessage());
+                  } catch (IllegalArgumentException e) {
+                      log.warn("Error uploading cover image:{}", e.getMessage());
+                      throw e;
+                  }catch(Exception e){
+                      log.warn("Cover upload failed for work '{}', but continuing. Error: {}", title, e.getMessage());
                   }
               }
 
@@ -176,12 +173,16 @@
 
               work.setChapters(chapters);
 
+              log.info("Uploaded work '{}'", title);
               return workDataService.saveWork(work);
           } catch(IllegalArgumentException e){
-              throw new IllegalArgumentException(e.getMessage());
+              log.warn("Invalid arguments: {}, {}, {}", title, authorId, genresId, e);
+              throw e;
           } catch(RuntimeException e){
+              log.error("Error uploading work '{}': ", title, e);
               throw new RuntimeException(e.getMessage());
           } catch(Exception e){
+              log.error("Error uploading work: ", e);
               throw new RuntimeException(e.getMessage());
           }
       }
@@ -198,6 +199,7 @@
           Work work = workDataService.findByIdOrThrow(workId);
 
           if (coverImage == null || coverImage.isEmpty()) {
+              log.error("Cover image is required");
               throw new IllegalArgumentException("Cover image is required");
           }
 
@@ -207,6 +209,7 @@
               workDataService.saveWork(work);
               return coverUrl;
           } catch (Exception e) {
+              log.warn("Error uploading cover image for work '{}': {}", work.getTitle(), e.getMessage());
               throw new RuntimeException("Ошибка при загрузке обложки в Dropbox: " + e.getMessage());
           }
       }

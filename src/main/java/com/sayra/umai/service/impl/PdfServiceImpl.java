@@ -39,7 +39,7 @@ public class PdfServiceImpl implements PdfService {
   }
 
     public static final String type_html = "html";
-    public static final int CHUNK_SIZE_BYTES = 500 * 1024; // 500 KB
+    public static final int CHUNK_SIZE_BYTES = 50 * 1024; // 500 KB
 
     // Более гибкий паттерн для fallback деления (по заголовкам)
     public static final Pattern CHAPTER_PATTERN = Pattern.compile(

@@ -1,32 +1,30 @@
 package com.sayra.umai.service.impl;
 
+import com.sayra.umai.exception.UserAlreadyExistsException;
 import com.sayra.umai.mapper.AuthorMapper;
 import com.sayra.umai.model.dto.AuthorDTO;
 import com.sayra.umai.model.entity.work.Work;
 import com.sayra.umai.model.request.AuthorRequest;
 import com.sayra.umai.model.entity.work.Author;
 import com.sayra.umai.repo_service.AuthorDataService;
+import com.sayra.umai.repo_service.UserEntityDataService;
 import com.sayra.umai.repo_service.WorkDataService;
 import com.sayra.umai.service.AuthorService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class AuthorServiceImpl implements AuthorService {
     private final AuthorDataService authorDataService;
     private final WorkDataService workDataService;
     private final AuthorMapper authorMapper;
-
-
-    public AuthorServiceImpl(AuthorDataService authorDataService,
-                             AuthorMapper authorMapper,
-                             WorkDataService workDataService) {
-        this.authorDataService = authorDataService;
-        this.authorMapper = authorMapper;
-        this.workDataService = workDataService;
-    }
+    private final UserEntityDataService userEntityDataService;
 
 
   @Transactional(readOnly = true)
@@ -51,7 +49,7 @@ public class AuthorServiceImpl implements AuthorService {
         author.setWiki(authorRequest.getWiki());
         author.setDate(authorRequest.getDateOfBirth());
         author.setPhoto(authorRequest.getPhoto());
-//        author.setPhoto(authorInDTO.getPhoto()); should be in db then the url
+//      author.setPhoto(authorInDTO.getPhoto()); should be in db then the url
         List<Work> authorWorks = workDataService.findAllById(authorRequest.getWorkIds());
         if(!authorWorks.isEmpty()){
             author.setWorks(authorWorks);
@@ -59,5 +57,24 @@ public class AuthorServiceImpl implements AuthorService {
         authorDataService.save(author);
       return authorMapper.toAuthorDTO(author);
   }
+  @Transactional
+  public void createKyrgyzNationalAuthor() {
+        String name = "Кыргыз эл чыгармачылыгы";
+
+        if(userEntityDataService.existsByUsernameOrThrow(name)){
+            throw new UserAlreadyExistsException("Author with name: " + name + " already exists");
+        }
+        Author author = new Author();
+        author.setName(name);
+        author.setBio(null);
+        author.setDate(null);
+        author.setWiki(null);
+        author.setPhoto(null);
+        authorDataService.save(author);
+
+        log.info("Created Kyrgyz National Author");
+    }
+
+
 
 }

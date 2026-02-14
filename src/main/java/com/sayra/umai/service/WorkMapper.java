@@ -10,9 +10,12 @@ import com.sayra.umai.model.response.WorkResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
+import org.mapstruct.Named;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring")
 public interface WorkMapper {
@@ -30,21 +33,44 @@ public interface WorkMapper {
 
   List<AllWorksDTO> worksToAllWorksDTOs(List<Work> works);
 
+  @Mappings({
+    @Mapping(source = "id", target = "chunkId"),
+    @Mapping(source = "chunkNumber", target = "chunkNumber"),
+    @Mapping(source = "type", target = "chunkType"),
+    @Mapping(source = "text", target = "text")
+  })
   ChunkResponse chunkToChunkResponse(Chunk chunk);
-  Set<ChunkResponse> chunksToChunkResponses(Set<Chunk> chunks);
+
+  @Named("sortedChunks")
+  default List<ChunkResponse> chunksToChunkResponses(Set<Chunk> chunks) {
+    if (chunks == null) return List.of();
+    return chunks.stream()
+            .sorted(Comparator.comparing(Chunk::getChunkNumber, Comparator.nullsLast(Comparator.naturalOrder())))
+            .map(this::chunkToChunkResponse)
+            .collect(Collectors.toList());
+  }
 
   @Mappings({
     @Mapping(source = "chapterNumber", target = "chapterNumber"),
     @Mapping(source = "chapterTitle", target = "chapterTitle"),
-    @Mapping(source = "chunks", target = "chunks")
+    @Mapping(source = "chunks", target = "chunks", qualifiedByName = "sortedChunks")
   })
   ChapterResponse chapterToChapterResponse(Chapter chapter);
-  Set<ChapterResponse> chaptersToChapterResponses(Set<Chapter> chapters);
+
+  @Named("sortedChapters")
+  default List<ChapterResponse> chaptersToChapterResponses(Set<Chapter> chapters) {
+    if (chapters == null) return List.of();
+    return chapters.stream()
+            .sorted(Comparator.comparing(Chapter::getChapterNumber, Comparator.nullsLast(Comparator.naturalOrder())))
+            .map(this::chapterToChapterResponse)
+            .collect(Collectors.toList());
+  }
 
   @Mappings({
+    @Mapping(source = "id", target = "workId"),
     @Mapping(source = "author", target = "author"),
     @Mapping(source = "genres", target = "genres"),
-    @Mapping(source = "chapters", target = "chapters"),
+    @Mapping(source = "chapters", target = "chapters", qualifiedByName = "sortedChapters"),
     @Mapping(target = "otherWorks", ignore = true)
   })
   WorkResponse workToWorkResponse(Work work);

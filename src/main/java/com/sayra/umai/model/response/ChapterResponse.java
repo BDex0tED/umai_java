@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -13,5 +14,5 @@ public class ChapterResponse {
     private int chapterNumber;
     private String chapterTitle;
 
-    private Set<ChunkResponse> chunks;
+    private List<ChunkResponse> chunks;
 }
