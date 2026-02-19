@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -52,7 +53,8 @@ public class GoogleAuthService {
             GoogleIdToken.Payload payload = idToken.getPayload();
             String googleId = payload.getSubject();
             String email = payload.getEmail();
-            String name = (String) payload.get("name");
+
+            String googleName = (String) payload.get("name");
 
             Optional<UserEntity> userByGoogleOpt = userEntityRepo.findByGoogleId(googleId);
             if (userByGoogleOpt.isPresent()) {
@@ -72,12 +74,15 @@ public class GoogleAuthService {
             Role roleUser = roleRepo.findByName("ROLE_USER")
                     .orElseThrow(() -> new UserNotFoundException("Default role not found in DB"));
 
-            UserEntity newUser = new UserEntity(name, email, List.of(roleUser), AuthProvider.GOOGLE);
+            String emailPrefix = email.substring(0, email.indexOf("@"));
 
+            String generatedUsername = emailPrefix + "_" + UUID.randomUUID().toString().substring(0, 5);
+
+            UserEntity newUser = new UserEntity(generatedUsername, email, List.of(roleUser), AuthProvider.GOOGLE);
             newUser.setGoogleId(googleId);
 
             userEntityRepo.save(newUser);
-            log.info("New User created via Google with email: {}", email);
+            log.info("New User created via Google with email: {} and username: {}", email, generatedUsername);
 
             return newUser;
 
@@ -85,5 +90,4 @@ public class GoogleAuthService {
             log.error("Token verification failed", e);
             throw new RuntimeException("Token verification failed", e);
         }
-    }
-}
+    }}
