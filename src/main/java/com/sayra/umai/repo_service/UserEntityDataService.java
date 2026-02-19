@@ -9,4 +9,7 @@ public interface UserEntityDataService {
     boolean existsByRoles_NameOrThrow(String name);
     boolean existsByUsernameOrThrow(String username);
     boolean existsByEmailOrThrow(String email);
+    boolean existsByGoogleId(String googleId);
+    UserEntity findByGoogleIdOrThrow(String email);
+    UserEntity findByEmailOrThrow(String email);
 }

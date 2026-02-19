@@ -62,7 +62,8 @@ public class AuthorServiceImpl implements AuthorService {
         String name = "Кыргыз эл чыгармачылыгы";
 
         if(userEntityDataService.existsByUsernameOrThrow(name)){
-            throw new UserAlreadyExistsException("Author with name: " + name + " already exists");
+            log.info("Kyrgyz National Author already exists");
+            return;
         }
         Author author = new Author();
         author.setName(name);

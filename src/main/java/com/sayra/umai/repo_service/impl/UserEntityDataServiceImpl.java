@@ -1,10 +1,13 @@
 package com.sayra.umai.repo_service.impl;
 
+import com.sayra.umai.exception.UserNotFoundException;
 import com.sayra.umai.model.entity.user.UserEntity;
 import com.sayra.umai.repo.UserEntityRepo;
 import com.sayra.umai.repo_service.UserEntityDataService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Service
 public class UserEntityDataServiceImpl implements UserEntityDataService {
@@ -41,6 +44,43 @@ public class UserEntityDataServiceImpl implements UserEntityDataService {
     public boolean existsByEmailOrThrow(String email) {
         if(isValidEmail(email)){
             return userEntityRepo.existsByEmail(email);
+        }else{
+            throw new IllegalArgumentException("Email: " + email + " is invalid");
+        }
+    }
+
+    @Override
+    public boolean existsByGoogleId(String googleId) {
+        if(!googleId.isEmpty()){
+            return userEntityRepo.existsByGoogleId(googleId);
+        }else{
+            throw new IllegalArgumentException("Google Id: " + googleId + " is invalid");
+        }
+    }
+
+    @Override
+    public UserEntity findByGoogleIdOrThrow(String googleId){
+        if(!googleId.isEmpty()){
+            Optional<UserEntity> userEntity = userEntityRepo.findByGoogleId(googleId);
+            if(userEntity.isPresent()){
+                return userEntity.get();
+            }else{
+                throw new UserNotFoundException("User with google id: " + googleId + " not found");
+            }
+        } else{
+            throw new IllegalArgumentException("Google Id: " + googleId + " is invalid");
+        }
+    }
+
+    @Override
+    public UserEntity findByEmailOrThrow(String email){
+        if(!email.isEmpty()){
+            Optional<UserEntity> userEntity = userEntityRepo.findByEmail(email);
+            if(userEntity.isPresent()){
+                return userEntity.get();
+            }else{
+                throw new UserNotFoundException("User with email: " + email + " not found");
+            }
         }else{
             throw new IllegalArgumentException("Email: " + email + " is invalid");
         }

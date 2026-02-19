@@ -1,5 +1,7 @@
 package com.sayra.umai.service.jwt;
 
+import com.sayra.umai.model.entity.user.Role;
+import com.sayra.umai.model.entity.user.UserEntity;
 import com.sayra.umai.security.jwt.SecurityConstants;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -28,6 +30,24 @@ public class JWTService {
         String username = authentication.getName();
         List<String> roles = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList());
+
+        Date currentDate = new Date();
+        Date expirationDate = new Date(currentDate.getTime() + SecurityConstants.JWT_EXPIRATION_TIME);
+
+        return Jwts.builder()
+                .subject(username)
+                .claim("roles", roles)
+                .issuedAt(currentDate)
+                .expiration(expirationDate)
+                .signWith(getKey())
+                .compact();
+    }
+    public String generateAccessToken(UserEntity userEntity) {
+        String username = userEntity.getUsername();
+
+        List<String> roles = userEntity.getRoles().stream()
+                .map(Role::getName)
                 .collect(Collectors.toList());
 
         Date currentDate = new Date();

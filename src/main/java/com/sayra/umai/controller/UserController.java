@@ -3,6 +3,8 @@ package com.sayra.umai.controller;
 import com.sayra.umai.model.dto.JWTResponse;
 import com.sayra.umai.model.dto.LoginDTO;
 import com.sayra.umai.model.dto.UserDTO;
+import com.sayra.umai.model.entity.user.UserEntity;
+import com.sayra.umai.service.impl.GoogleAuthService;
 import com.sayra.umai.service.impl.UserService;
 import com.sayra.umai.model.request.ChangePasswordRequest;
 import jakarta.servlet.http.HttpServletRequest;
@@ -11,13 +13,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.*;
+import com.sayra.umai.model.request.TokenRequest;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
     private final UserService userService;
-    public UserController(UserService userService) {
+    private final GoogleAuthService googleAuthService;
+    public UserController(UserService userService,GoogleAuthService googleAuthService) {
         this.userService = userService;
+        this.googleAuthService = googleAuthService;
     }
 
     @PostMapping("/register")
@@ -35,7 +40,13 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<JWTResponse> login(@RequestBody LoginDTO loginDTO, HttpServletResponse response){
-        return ResponseEntity.ok(userService.login(loginDTO, response));
+        try {
+            return ResponseEntity.ok(userService.login(loginDTO, response));
+        }catch (BadCredentialsException badCredentialsException){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
     @PostMapping("/change-password")
@@ -59,6 +70,17 @@ public class UserController {
     @PostMapping("/refresh-token")
     public ResponseEntity<JWTResponse> refreshToken(HttpServletRequest request, HttpServletResponse response) throws BadCredentialsException, Exception{
         return ResponseEntity.ok(userService.refreshToken(request, response));
+    }
+
+    @PostMapping("/google-login")
+    public ResponseEntity<?> googleLogin(@RequestBody TokenRequest tokenRequest, HttpServletResponse response) {
+        try {
+            return ResponseEntity.status(HttpStatus.OK).body(userService.googleLogin(tokenRequest, response));
+        } catch(BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Credentials");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Authentication failed");
+        }
     }
 
 }
