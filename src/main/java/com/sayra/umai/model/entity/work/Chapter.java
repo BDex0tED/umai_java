@@ -1,10 +1,13 @@
 package com.sayra.umai.model.entity.work;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -33,7 +36,9 @@ public class Chapter {
 
     @OneToMany(mappedBy = "chapter",  cascade = CascadeType.ALL,
             orphanRemoval = true, fetch = FetchType.LAZY)
-    private Set<Chunk> chunks = new HashSet<>();
+    @OrderBy("chunkNumber ASC")
+    @JsonManagedReference
+    private List<Chunk> chunks = new ArrayList<>();
 
 
 }

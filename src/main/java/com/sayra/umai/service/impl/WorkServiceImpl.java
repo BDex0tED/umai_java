@@ -106,87 +106,6 @@
                   .toList();
       }
 
-      @Transactional
-      public Work uploadWork(MultipartFile pdfFile,
-                             String title,
-                             Long authorId,
-                             Set<Long> genresId,
-                             String description,
-                             MultipartFile coverImage
-      ) throws IOException {
-          try{
-
-              File cleanedPdf = pdfTextService.savePdf(pdfFile);
-
-              List<PdfServiceImpl.ChapterData> chaptersData = pdfTextService.extractChapters(cleanedPdf);
-
-              Author author = authorDataService.findByIdOrThrow(authorId);
-              Set<Genre> genres = new HashSet<>();
-              if(genresId != null && !genresId.isEmpty()){
-                  for(Long genreId : genresId){
-                      Genre genre = genreDataService.findByIdOrThrow(genreId);
-                      genres.add(genre);
-                  }
-              }
-
-              Work work = new Work();
-              work.setTitle(title);
-              work.setAuthor(author);
-              work.setDescription(description);
-              work.setFilePath(cleanedPdf.getAbsolutePath());
-              work.setGenres(genres);
-              work.setStatus(WorkStatus.PENDING);
-
-              // Загружаем обложку в Dropbox, если она предоставлена
-              if (coverImage != null && !coverImage.isEmpty()) {
-                  try {
-                      String coverUrl = dropboxService.uploadFile(coverImage, "covers");
-                      work.setCoverUrl(coverUrl);
-                  } catch (IllegalArgumentException e) {
-                      log.warn("Error uploading cover image:{}", e.getMessage());
-                      throw e;
-                  }catch(Exception e){
-                      log.warn("Cover upload failed for work '{}', but continuing. Error: {}", title, e.getMessage());
-                  }
-              }
-
-              Set<Chapter> chapters = new HashSet<>();
-              for (PdfServiceImpl.ChapterData chData : chaptersData) {
-                  Chapter chapter = new Chapter();
-                  chapter.setChapterNumber(chData.chapterNumber());
-                  chapter.setChapterTitle(chData.title());
-                  chapter.setWork(work);
-
-                  Set<Chunk> chunks = new HashSet<>();
-                  int chunkNum = 1;
-                  for (String chunkText : chData.chunks()) {
-                      Chunk chunk = new Chunk();
-                      chunk.setChunkNumber(chunkNum++);
-                      chunk.setText(chunkText);
-                      chunk.setType(ChunkType.html);
-                      chunk.setChapter(chapter);
-                      chunks.add(chunk);
-                  }
-                  chapter.setChunks(chunks);
-                  chapters.add(chapter);
-              }
-
-              work.setChapters(chapters);
-
-              log.info("Uploaded work '{}'", title);
-              return workDataService.saveWork(work);
-          } catch(IllegalArgumentException e){
-              log.warn("Invalid arguments: {}, {}, {}", title, authorId, genresId, e);
-              throw e;
-          } catch(RuntimeException e){
-              log.error("Error uploading work '{}': ", title, e);
-              throw new RuntimeException(e.getMessage());
-          } catch(Exception e){
-              log.error("Error uploading work: ", e);
-              throw new RuntimeException(e.getMessage());
-          }
-      }
-
       /**
        * Загружает обложку для существующего произведения
        * @param workId ID произведения
@@ -223,39 +142,101 @@
       public void deleteCover(Long workId) throws EntityNotFoundException {
           Work work = workDataService.findByIdOrThrow(workId);
 
-          if (work.getCoverUrl() != null && !work.getCoverUrl().isEmpty()) {
+          // Use the stored path! No more URL parsing needed.
+          if (work.getCoverDropboxPath() != null) {
               try {
-                  // Извлекаем путь к файлу из URL для удаления из Dropbox
-                  String filePath = extractFilePathFromUrl(work.getCoverUrl());
-                  if (filePath != null) {
-                      dropboxService.deleteFile(filePath);
-                  }
+                  dropboxService.deleteFile(work.getCoverDropboxPath());
               } catch (Exception e) {
-                  // Логируем ошибку, но не прерываем выполнение
-                  System.err.println("Ошибка при удалении обложки из Dropbox: " + e.getMessage());
+                  log.error("Ошибка при удалении обложки из Dropbox: " + e.getMessage());
               }
           }
 
           work.setCoverUrl(null);
+          work.setCoverDropboxPath(null); // Clear the path
           workDataService.saveWork(work);
       }
 
-      /**
-       * Извлекает путь к файлу из Dropbox URL
-       * @param url URL файла в Dropbox
-       * @return путь к файлу или null если не удалось извлечь
-       */
-      private String extractFilePathFromUrl(String url) {
-          try {
-              // URL выглядит как: https://www.dropbox.com/s/.../filename?raw=1
-              // Нужно извлечь путь к файлу
-              if (url.contains("dropbox.com")) {
-                  // Простое извлечение - в реальном проекте может потребоваться более сложная логика
-                  return null; // Пока возвращаем null, так как для удаления нужен точный путь
-              }
-          } catch (Exception e) {
-              System.err.println("Ошибка при извлечении пути из URL: " + e.getMessage());
+      @Transactional
+      public Work uploadWork(MultipartFile pdfFile, String title, Long authorId, List<Long> genresId, String description, MultipartFile coverImage) throws IOException {
+
+          File cleanedPdf = pdfTextService.savePdf(pdfFile);
+          List<PdfServiceImpl.ChapterData> chaptersData = pdfTextService.extractChapters(cleanedPdf);
+
+          Work work = buildBaseWork(title, authorId, genresId, description, cleanedPdf.getAbsolutePath());
+
+          uploadAndAttachCover(work, coverImage);
+
+          buildAndAttachChapters(work, chaptersData);
+
+          log.info("Successfully uploaded and processed work '{}'", title);
+          return workDataService.saveWork(work);
+      }
+
+      private Work buildBaseWork(String title, Long authorId, List<Long> genresId, String description, String filePath) {
+          Author author = authorDataService.findByIdOrThrow(authorId);
+
+          List<Genre> genres = new ArrayList<>();
+          if (genresId != null && !genresId.isEmpty()) {
+              genres = genresId.stream().map(genreDataService::findByIdOrThrow).collect(Collectors.toList());
           }
-          return null;
+
+          Work work = new Work();
+          work.setTitle(title);
+          work.setAuthor(author);
+          work.setDescription(description);
+          work.setFilePath(filePath);
+          work.setGenres(genres);
+          work.setStatus(WorkStatus.PENDING);
+
+          return work;
+      }
+
+      private void uploadAndAttachCover(Work work, MultipartFile coverImage) {
+          if (coverImage == null || coverImage.isEmpty()) {
+              return;
+          }
+
+          try {
+              String uniqueFilename = UUID.randomUUID().toString() + "_" + coverImage.getOriginalFilename();
+              String dropboxPath = "/covers/" + uniqueFilename;
+
+              String coverUrl = dropboxService.uploadFile(coverImage, dropboxPath);
+
+              work.setCoverUrl(coverUrl);
+              work.setCoverDropboxPath(dropboxPath);
+          } catch (IllegalArgumentException e) {
+              log.warn("Invalid cover image provided: {}", e.getMessage());
+              throw e;
+          } catch (Exception e) {
+              log.warn("Cover upload failed for work '{}', but continuing. Error: {}", work.getTitle(), e.getMessage());
+          }
+      }
+
+      private void buildAndAttachChapters(Work work, List<PdfServiceImpl.ChapterData> chaptersData) {
+          List<Chapter> chapters = new ArrayList<>();
+
+          for (PdfServiceImpl.ChapterData chData : chaptersData) {
+              Chapter chapter = new Chapter();
+              chapter.setChapterNumber(chData.chapterNumber());
+              chapter.setChapterTitle(chData.title());
+              chapter.setWork(work);
+
+              List<Chunk> chunks = new ArrayList<>();
+              int chunkNum = 1;
+
+              for (String chunkText : chData.chunks()) {
+                  Chunk chunk = new Chunk();
+                  chunk.setChunkNumber(chunkNum++);
+                  chunk.setText(chunkText);
+                  chunk.setType(ChunkType.html);
+                  chunk.setChapter(chapter);
+                  chunks.add(chunk);
+              }
+
+              chapter.setChunks(chunks);
+              chapters.add(chapter);
+          }
+
+          work.setChapters(chapters);
       }
   }

@@ -10,12 +10,14 @@ import com.sayra.umai.repo_service.AuthorDataService;
 import com.sayra.umai.repo_service.UserEntityDataService;
 import com.sayra.umai.repo_service.WorkDataService;
 import com.sayra.umai.service.AuthorService;
+import com.sayra.umai.service.DropboxService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +27,7 @@ public class AuthorServiceImpl implements AuthorService {
     private final WorkDataService workDataService;
     private final AuthorMapper authorMapper;
     private final UserEntityDataService userEntityDataService;
+    private final DropboxService dropboxService;
 
 
   @Transactional(readOnly = true)
@@ -48,8 +51,22 @@ public class AuthorServiceImpl implements AuthorService {
         author.setBio(authorRequest.getBio());
         author.setWiki(authorRequest.getWiki());
         author.setDate(authorRequest.getDateOfBirth());
-        author.setPhoto(authorRequest.getPhoto());
-//      author.setPhoto(authorInDTO.getPhoto()); should be in db then the url
+
+        try{
+            String uniqueName = UUID.randomUUID().toString() + "_" + authorRequest.getPhoto().getOriginalFilename();
+            String dropboxPath = "/authors/" + uniqueName;
+
+            String authorUrl = dropboxService.uploadFile(authorRequest.getPhoto(),dropboxPath);
+
+            author.setPhotoUrl(authorUrl);
+            author.setPhotoDropboxPath(dropboxPath);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid author photo provided: {}", e.getMessage());
+            throw e;
+        } catch(Exception e){
+            log.warn("Author photo upload failed: {}", e.getMessage());
+        }
+
         List<Work> authorWorks = workDataService.findAllById(authorRequest.getWorkIds());
         if(!authorWorks.isEmpty()){
             author.setWorks(authorWorks);
@@ -70,12 +87,12 @@ public class AuthorServiceImpl implements AuthorService {
         author.setBio(null);
         author.setDate(null);
         author.setWiki(null);
-        author.setPhoto(null);
+        author.setPhotoUrl(null);
+        author.setPhotoDropboxPath(null);
         authorDataService.save(author);
 
         log.info("Created Kyrgyz National Author");
     }
-
 
 
 }

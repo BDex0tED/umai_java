@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 public interface WorkMapper {
   GenreDTO genreToGenreDTO(Genre genre);
   List<GenreDTO> genresToGenreDTOs(List<Genre> genres);
-  Set<GenreDTO> genresSetToGenreDTOSet(Set<Genre> genres);
+  List<GenreDTO> genresSetToGenreDTOSet(List<Genre> genres);
 
   AuthorResponse authorToAuthorResponse(Author author);
 
@@ -42,7 +42,7 @@ public interface WorkMapper {
   ChunkResponse chunkToChunkResponse(Chunk chunk);
 
   @Named("sortedChunks")
-  default List<ChunkResponse> chunksToChunkResponses(Set<Chunk> chunks) {
+  default List<ChunkResponse> chunksToChunkResponses(List<Chunk> chunks) {
     if (chunks == null) return List.of();
     return chunks.stream()
             .sorted(Comparator.comparing(Chunk::getChunkNumber, Comparator.nullsLast(Comparator.naturalOrder())))
@@ -58,7 +58,7 @@ public interface WorkMapper {
   ChapterResponse chapterToChapterResponse(Chapter chapter);
 
   @Named("sortedChapters")
-  default List<ChapterResponse> chaptersToChapterResponses(Set<Chapter> chapters) {
+  default List<ChapterResponse> chaptersToChapterResponses(List<Chapter> chapters) {
     if (chapters == null) return List.of();
     return chapters.stream()
             .sorted(Comparator.comparing(Chapter::getChapterNumber, Comparator.nullsLast(Comparator.naturalOrder())))

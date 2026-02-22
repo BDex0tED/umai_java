@@ -5,6 +5,7 @@ import com.sayra.umai.model.response.WorkResponse;
 import com.sayra.umai.model.entity.work.Work;
 import com.sayra.umai.model.dto.WorkStatus;
 import com.sayra.umai.service.impl.WorkServiceImpl;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,49 +14,35 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.Set;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/umai")
-//@CrossOrigin(origins = {"http://localhost:5173"})
+@RequiredArgsConstructor
 public class UmaiController {
+
     private final WorkServiceImpl workServiceImpl;
-    public UmaiController(WorkServiceImpl workServiceImpl) {
-        this.workServiceImpl = workServiceImpl;
-    }
+
     @GetMapping("/home")
     public ResponseEntity<String> home(){
         return ResponseEntity.ok("Yokoso");
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<?> uploadWork(
+    public ResponseEntity<Long> uploadWork(
             @RequestParam("file") MultipartFile file,
             @RequestParam("title") String title,
             @RequestParam("authorId") Long authorId,
-            @RequestParam(value = "genreIds", required = false) Set<Long> genresId,
+            @RequestParam(value = "genreIds", required = false) List<Long> genresId,
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "cover", required = false) MultipartFile cover
-    ) {
-        try {
-            Work saved = workServiceImpl.uploadWork(file, title, authorId, genresId, description, cover);
-            return ResponseEntity.status(HttpStatus.CREATED).body(saved.getId());
-        } catch(IllegalArgumentException e){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
-        } catch(RuntimeException e){
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+    ) throws IOException {
+
+        Work saved = workServiceImpl.uploadWork(file, title, authorId, genresId, description, cover);
+        return ResponseEntity.status(HttpStatus.CREATED).body(saved.getId());
     }
 
-//    @GetMapping("/works/{work_id}/pages/{page_num}")
-//    public ResponseEntity<PagesDTO> getPageOfWork(@PathVariable Long work_id, @PathVariable Integer page_num){
-//        return workService.getPageOfWork(work_id, page_num);
-//    }
-//
     @GetMapping("/works")
     public ResponseEntity<List<AllWorksDTO>> getAllWorks(){
         return ResponseEntity.ok(workServiceImpl.getAllWorks());
@@ -80,7 +67,4 @@ public class UmaiController {
         List<AllWorksDTO> result = workServiceImpl.searchWorks(q, authorId, genreIds, status, createdFrom, createdTo, page, size);
         return ResponseEntity.ok(result);
     }
-
-
-
 }

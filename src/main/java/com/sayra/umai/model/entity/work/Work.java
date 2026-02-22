@@ -32,19 +32,22 @@ public class Work {
     @JoinColumn(name="author", nullable = false)
     private Author author;
 
-    //added this to prevent cyclic shit in authorservice.get("/")
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name="work_genres",
             joinColumns = @JoinColumn(name = "work_id"),
             inverseJoinColumns = @JoinColumn(name = "genre_id"))
-    private Set<Genre> genres;
+    private List<Genre> genres;
 
     @Column(columnDefinition = "text")
     private String description;
 
     private String filepath;
 
+    @Column(name = "cover_url")
     private String coverUrl;
+
+    @Column(name = "cover_dropbox_path")
+    private String coverDropboxPath;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -56,7 +59,8 @@ public class Work {
 
     @OneToMany(mappedBy = "work", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference
-    private Set<Chapter> chapters;
+    @OrderBy("chapterNumber ASC")
+    private List<Chapter> chapters;
 
     public void setFilePath(String filepath) {
         this.filepath = filepath;

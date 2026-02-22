@@ -56,7 +56,7 @@ public class PdfServiceImpl implements PdfService {
   public Work uploadWork(MultipartFile pdfFile,
                          String title,
                          Long authorId,
-                         Set<Long> genresId,
+                         List<Long> genresId,
                          String description,
                          MultipartFile coverImage
   ) throws IOException {
@@ -67,7 +67,7 @@ public class PdfServiceImpl implements PdfService {
       List<PdfServiceImpl.ChapterData> chaptersData = pdfTextService.extractChapters(cleanedPdf);
 
       Author author = authorDataService.findByIdOrThrow(authorId);
-      Set<Genre> genres = new HashSet<>();
+      List<Genre> genres = new ArrayList<>();
       if(genresId != null && !genresId.isEmpty()){
         for(Long genreId : genresId){
           Genre genre = genreDataService.findByIdOrThrow(genreId);
@@ -93,14 +93,14 @@ public class PdfServiceImpl implements PdfService {
         }
       }
 
-      Set<Chapter> chapters = new HashSet<>();
+      List<Chapter> chapters = new ArrayList<>();
       for (PdfServiceImpl.ChapterData chData : chaptersData) {
         Chapter chapter = new Chapter();
         chapter.setChapterNumber(chData.chapterNumber());
         chapter.setChapterTitle(chData.title());
         chapter.setWork(work);
 
-        Set<Chunk> chunks = new HashSet<>();
+        List<Chunk> chunks = new ArrayList<>();
         int chunkNum = 1;
         for (String chunkText : chData.chunks()) {
           Chunk chunk = new Chunk();

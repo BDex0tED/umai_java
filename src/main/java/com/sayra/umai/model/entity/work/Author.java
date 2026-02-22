@@ -18,7 +18,11 @@ public class Author {
     @ToString.Include
     private Long id;
 
-    private String photo;
+    @Column(name = "photo_url")
+    private String photoUrl;
+
+    @Column(name = "photo_dropbox_path")
+    private String photoDropboxPath;
 
     @Column(nullable = false)
     @ToString.Include
