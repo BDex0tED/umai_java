@@ -11,6 +11,7 @@ import com.sayra.umai.repo_service.UserEntityDataService;
 import com.sayra.umai.repo_service.WorkDataService;
 import com.sayra.umai.service.AuthorService;
 import com.sayra.umai.service.DropboxService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,15 @@ public class AuthorServiceImpl implements AuthorService {
     return authorMapper.toAuthorDTO(authorDataService.findAllWithWorks());
   }
 
+  @Override
+  @Transactional(readOnly = true)
+  public AuthorDTO getAuthorById(Long id) throws EntityNotFoundException {
+      if(id == null || id <= 0){
+          throw new IllegalArgumentException("Invalid id");
+      }
+      Author author = authorDataService.findByIdOrThrow(id);
+      return authorMapper.toAuthorDTO(author);
+  }
 
   @Transactional
   @Override
@@ -53,7 +63,7 @@ public class AuthorServiceImpl implements AuthorService {
         author.setDate(authorRequest.getDateOfBirth());
 
         try{
-            String uniqueName = UUID.randomUUID().toString() + "_" + authorRequest.getPhoto().getOriginalFilename();
+            String uniqueName = UUID.randomUUID() + "_" + authorRequest.getPhoto().getOriginalFilename();
             String dropboxPath = "/authors/" + uniqueName;
 
             String authorUrl = dropboxService.uploadFile(authorRequest.getPhoto(),dropboxPath);

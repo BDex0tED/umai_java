@@ -8,5 +8,6 @@ import java.util.List;
 
 public interface AuthorService {
   List<AuthorDTO> getAllAuthors();
+  AuthorDTO getAuthorById(Long authorId);
   AuthorDTO save(AuthorRequest authorRequest);
 }

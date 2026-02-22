@@ -10,8 +10,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/users")
@@ -21,7 +23,6 @@ public class UserController {
 
     @PostMapping("/register")
     public ResponseEntity<UserDTO> register(@RequestBody UserDTO userDTO){
-        // No try-catch! If it fails, the ExceptionHandler catches it.
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.register(userDTO));
     }
 
@@ -50,5 +51,21 @@ public class UserController {
     @PostMapping("/google-login")
     public ResponseEntity<JWTResponse> googleLogin(@RequestBody TokenRequest tokenRequest, HttpServletResponse response) {
         return ResponseEntity.status(HttpStatus.OK).body(userService.googleLogin(tokenRequest, response));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserDTO> getCurrentUser() {
+        return ResponseEntity.ok(userService.getCurrentUserInfo());
+    }
+
+    @PostMapping(value = "/profile-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> uploadProfilePhoto(@RequestParam("photo") MultipartFile photo) {
+        return ResponseEntity.ok(userService.uploadProfilePhoto(photo));
+    }
+
+    @DeleteMapping("/profile-photo")
+    public ResponseEntity<String> deleteProfilePhoto() {
+        userService.deleteProfilePhoto();
+        return ResponseEntity.ok("Profile photo deleted successfully");
     }
 }

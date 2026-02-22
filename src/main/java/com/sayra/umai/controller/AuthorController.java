@@ -6,11 +6,9 @@ import com.sayra.umai.model.entity.work.Author;
 import com.sayra.umai.service.AuthorService;
 import com.sayra.umai.service.impl.AuthorServiceImpl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -28,7 +26,12 @@ public class AuthorController {
         return ResponseEntity.ok(authorService.getAllAuthors());
     }
 
-    @PostMapping("/create-author")
+    @GetMapping("/{id}")
+    public ResponseEntity<AuthorDTO> getAuthorById(@PathVariable Long id) {
+        return ResponseEntity.ok(authorService.getAuthorById(id));
+    }
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AuthorDTO> createAuthor(@RequestBody AuthorRequest authorRequest) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authorService.save(authorRequest));
     }

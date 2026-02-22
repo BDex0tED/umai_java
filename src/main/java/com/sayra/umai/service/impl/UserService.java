@@ -225,15 +225,17 @@ public class UserService {
         }
 
         try {
-            if (currentUser.getProfilePhotoUrl() != null && !currentUser.getProfilePhotoUrl().isEmpty()) {
+            if (currentUser.getProfilePhotoDropboxPath() != null) {
                 deleteProfilePhoto();
             }
 
-            // Note: Dropbox paths typically require a leading slash
-            String dropboxPath = "/profiles/" + currentUser.getUsername();
+            String uniqueFilename = UUID.randomUUID() + "_" + profilePhoto.getOriginalFilename();
+            String dropboxPath = "/profiles/" + uniqueFilename;
+
             String photoUrl = dropboxServiceImpl.uploadFile(profilePhoto, dropboxPath);
 
             currentUser.setProfilePhotoUrl(photoUrl);
+            currentUser.setProfilePhotoDropboxPath(dropboxPath);
             userEntityRepo.save(currentUser);
 
             return photoUrl;
@@ -245,20 +247,18 @@ public class UserService {
     public void deleteProfilePhoto() {
         UserEntity currentUser = getCurrentUser();
 
-        if (currentUser.getProfilePhotoUrl() != null && !currentUser.getProfilePhotoUrl().isEmpty()) {
+        if (currentUser.getProfilePhotoDropboxPath() != null) {
             try {
-                // We know exactly where we saved it, no need to parse the URL!
-                String filePath = "/profiles/" + currentUser.getUsername();
-                dropboxServiceImpl.deleteFile(filePath);
+                dropboxServiceImpl.deleteFile(currentUser.getProfilePhotoDropboxPath());
             } catch (Exception e) {
                 log.error("Ошибка при удалении фото профиля из Dropbox: {}", e.getMessage());
             }
         }
 
         currentUser.setProfilePhotoUrl(null);
+        currentUser.setProfilePhotoDropboxPath(null);
         userEntityRepo.save(currentUser);
     }
-
     public UserDTO getCurrentUserInfo() {
         UserEntity currentUser = getCurrentUser();
         UserDTO userDTO = new UserDTO();

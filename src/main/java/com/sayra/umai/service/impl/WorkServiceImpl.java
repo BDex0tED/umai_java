@@ -159,10 +159,19 @@
       @Transactional
       public Work uploadWork(MultipartFile pdfFile, String title, Long authorId, Set<Long> genresId, String description, MultipartFile coverImage) throws IOException {
 
-          File cleanedPdf = pdfTextService.savePdf(pdfFile);
-          List<PdfServiceImpl.ChapterData> chaptersData = pdfTextService.extractChapters(cleanedPdf);
+          File tempPdf = pdfTextService.savePdf(pdfFile);
+          List<PdfServiceImpl.ChapterData> chaptersData;
 
-          Work work = buildBaseWork(title, authorId, genresId, description, cleanedPdf.getAbsolutePath());
+          try {
+              chaptersData = pdfTextService.extractChapters(tempPdf);
+          } finally {
+              if (tempPdf != null && tempPdf.exists()) {
+                  tempPdf.delete();
+                  log.info("Temporary PDF file deleted successfully.");
+              }
+          }
+
+          Work work = buildBaseWork(title, authorId, genresId, description, null);
 
           uploadAndAttachCover(work, coverImage);
 

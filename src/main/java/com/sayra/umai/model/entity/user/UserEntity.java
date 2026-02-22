@@ -40,10 +40,9 @@ public class UserEntity {
     @Column(name = "profile_photo_url")
     private String profilePhotoUrl;
 
-    //email verification
-//    @Column(name = "verification_code", length = 64)
-//    private String verificationCode;
-//    private boolean enabled;
+    @Column(name = "profile_photo_dropbox_path")
+    private String profilePhotoDropboxPath;
+
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "id"),
