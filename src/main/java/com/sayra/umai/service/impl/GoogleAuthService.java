@@ -26,7 +26,7 @@ import java.util.UUID;
 @Slf4j
 public class GoogleAuthService {
 
-    @Value("${google.client-id}")
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
     private String clientId;
 
     private final UserEntityRepo userEntityRepo;
@@ -47,7 +47,7 @@ public class GoogleAuthService {
             GoogleIdToken idToken = verifier.verify(idTokenString);
 
             if (idToken == null) {
-                throw new RuntimeException("Invalid ID token.");
+                throw new IllegalArgumentException("Invalid ID token.");
             }
 
             GoogleIdToken.Payload payload = idToken.getPayload();

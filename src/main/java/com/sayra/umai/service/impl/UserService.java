@@ -1,5 +1,6 @@
 package com.sayra.umai.service.impl;
 
+import com.sayra.umai.exception.ResourceNotFoundException;
 import com.sayra.umai.exception.UserNotFoundException;
 import com.sayra.umai.model.dto.JWTResponse;
 import com.sayra.umai.model.dto.LoginDTO;
@@ -80,7 +81,7 @@ public class UserService {
         userEntity.setEmail(userDTO.getEmail());
 
         Role userRole = roleRepo.findByName("ROLE_USER").orElseThrow(
-                ()-> new IllegalStateException("Role not found"));
+                ()-> new ResourceNotFoundException("Role not found"));
         List<Role> roles = new ArrayList<>();
         roles.add(userRole);
         userEntity.setRoles(roles);
@@ -108,20 +109,26 @@ public class UserService {
     }
 
     public JWTResponse googleLogin(TokenRequest tokenRequest, HttpServletResponse response){
-        UserEntity userEntity = googleAuthService.authenticateWithGoogle(tokenRequest.idToken());
+        try {
+            UserEntity userEntity = googleAuthService.authenticateWithGoogle(tokenRequest.idToken());
 
-        String accessToken = jwtService.generateAccessToken(userEntity);
+            String accessToken = jwtService.generateAccessToken(userEntity);
 
-        List<SimpleGrantedAuthority> authorities = userEntity.getRoles().stream()
-                .map(role -> new SimpleGrantedAuthority(role.getName()))
-                .collect(Collectors.toList());
+            List<SimpleGrantedAuthority> authorities = userEntity.getRoles().stream()
+                    .map(role -> new SimpleGrantedAuthority(role.getName()))
+                    .collect(Collectors.toList());
 
-        Authentication authentication = new UsernamePasswordAuthenticationToken(userEntity.getUsername(), null, authorities);
-        String refreshToken = jwtService.generateRefreshToken(authentication);
+            Authentication authentication = new UsernamePasswordAuthenticationToken(userEntity.getUsername(), null, authorities);
+            String refreshToken = jwtService.generateRefreshToken(authentication);
 
-        setRefreshCookie(response, refreshToken);
+            setRefreshCookie(response, refreshToken);
 
-        return new JWTResponse(accessToken);
+            return new JWTResponse(accessToken);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid token");
+        } catch (Exception e) {
+            throw new RuntimeException("Authentication failed", e);
+        }
     }
 
     public void changePassword(ChangePasswordRequest changePasswordRequest){
@@ -187,7 +194,6 @@ public class UserService {
         }
     }
 
-    // Extracted cookie logic to keep methods DRY
     private void setRefreshCookie(HttpServletResponse response, String refreshToken) {
         ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
                 .httpOnly(true)

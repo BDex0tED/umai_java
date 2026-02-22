@@ -1,4 +1,4 @@
-package com.sayra.umai.security.config;
+package com.sayra.umai.config;
 
 import com.sayra.umai.security.jwt.JWTFilter;
 import com.sayra.umai.security.service.MeninUserDetailsService;
@@ -45,7 +45,16 @@ public class SecurityConfig {
 //                                "/swagger-ui/**",
 //                                "/swagger-ui.html",
 //                                "/v3/api-docs/**").permitAll()
-                        .anyRequest().permitAll()).
+                        .requestMatchers("/api/users/register",
+                                "/api/users/login",
+                                "/api/users/google-login",
+                                "/api/users/refresh-token",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+
+                                "/umai/home", "/umai/works", "/umai/work/**").permitAll()
+                        .anyRequest().authenticated()).
                 sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

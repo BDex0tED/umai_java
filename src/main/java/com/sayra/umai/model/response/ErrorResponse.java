@@ -1,9 +1,6 @@
 package com.sayra.umai.model.response;
 
-import java.time.LocalDateTime;
+import lombok.Builder;
 
-public record ErrorResponse(LocalDateTime timestamp,
-                            int statusCode,
-                            String error,
-                            String message,
-                            String path) {}
+@Builder
+public record ErrorResponse(ErrorDetail error) {}
