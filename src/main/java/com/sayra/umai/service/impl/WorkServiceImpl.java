@@ -157,7 +157,7 @@
       }
 
       @Transactional
-      public Work uploadWork(MultipartFile pdfFile, String title, Long authorId, List<Long> genresId, String description, MultipartFile coverImage) throws IOException {
+      public Work uploadWork(MultipartFile pdfFile, String title, Long authorId, Set<Long> genresId, String description, MultipartFile coverImage) throws IOException {
 
           File cleanedPdf = pdfTextService.savePdf(pdfFile);
           List<PdfServiceImpl.ChapterData> chaptersData = pdfTextService.extractChapters(cleanedPdf);
@@ -172,12 +172,12 @@
           return workDataService.saveWork(work);
       }
 
-      private Work buildBaseWork(String title, Long authorId, List<Long> genresId, String description, String filePath) {
+      private Work buildBaseWork(String title, Long authorId, Set<Long> genresId, String description, String filePath) {
           Author author = authorDataService.findByIdOrThrow(authorId);
 
-          List<Genre> genres = new ArrayList<>();
+          Set<Genre> genres = new HashSet<>();
           if (genresId != null && !genresId.isEmpty()) {
-              genres = genresId.stream().map(genreDataService::findByIdOrThrow).collect(Collectors.toList());
+              genres = genresId.stream().map(genreDataService::findByIdOrThrow).collect(Collectors.toSet());
           }
 
           Work work = new Work();

@@ -74,7 +74,7 @@ public class WorkDataServiceImpl implements WorkDataService {
 
   @Override
   @Transactional
-  public Work saveWorkAndChapters(Work work, Set<Chapter> chapters) {
+  public Work saveWorkAndChapters(Work work, List<Chapter> chapters) {
     work.setChapters(chapters);
     return workRepo.save(work);
   }

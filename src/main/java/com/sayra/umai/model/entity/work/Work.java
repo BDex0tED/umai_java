@@ -36,7 +36,7 @@ public class Work {
     @JoinTable(name="work_genres",
             joinColumns = @JoinColumn(name = "work_id"),
             inverseJoinColumns = @JoinColumn(name = "genre_id"))
-    private List<Genre> genres;
+    private Set<Genre> genres;
 
     @Column(columnDefinition = "text")
     private String description;

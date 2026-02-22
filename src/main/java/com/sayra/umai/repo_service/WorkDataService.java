@@ -26,7 +26,7 @@ public interface WorkDataService {
   Work saveWork(Work work);
 
   @Transactional
-  Work saveWorkAndChapters(Work work, Set<Chapter> chapters);
+  Work saveWorkAndChapters(Work work, List<Chapter> chapters);
 
   List<Long> searchWorkIdsWithFTS(@Param("query") String query,
                                   @Param("authorId") Long authorId,

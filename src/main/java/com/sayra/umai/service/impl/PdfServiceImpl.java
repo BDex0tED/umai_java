@@ -56,7 +56,7 @@ public class PdfServiceImpl implements PdfService {
   public Work uploadWork(MultipartFile pdfFile,
                          String title,
                          Long authorId,
-                         List<Long> genresId,
+                         Set<Long> genresId,
                          String description,
                          MultipartFile coverImage
   ) throws IOException {
@@ -67,7 +67,7 @@ public class PdfServiceImpl implements PdfService {
       List<PdfServiceImpl.ChapterData> chaptersData = pdfTextService.extractChapters(cleanedPdf);
 
       Author author = authorDataService.findByIdOrThrow(authorId);
-      List<Genre> genres = new ArrayList<>();
+      Set<Genre> genres = new HashSet<>();
       if(genresId != null && !genresId.isEmpty()){
         for(Long genreId : genresId){
           Genre genre = genreDataService.findByIdOrThrow(genreId);

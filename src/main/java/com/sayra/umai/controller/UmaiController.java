@@ -34,7 +34,7 @@ public class UmaiController {
             @RequestParam("file") MultipartFile file,
             @RequestParam("title") String title,
             @RequestParam("authorId") Long authorId,
-            @RequestParam(value = "genreIds", required = false) List<Long> genresId,
+            @RequestParam(value = "genreIds", required = false) Set<Long> genresId,
             @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "cover", required = false) MultipartFile cover
     ) throws IOException {
