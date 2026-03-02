@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 
-@RestController("/author")
+@RestController("/api/author")
 public class AuthorController {
     private AuthorService authorService;
     public AuthorController(AuthorService authorService) {

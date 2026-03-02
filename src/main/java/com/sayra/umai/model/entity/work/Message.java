@@ -24,14 +24,20 @@ public class Message {
 
     @Column(nullable = false)
     @ToString.Include
-    private String sender;
+    @Enumerated(value = EnumType.STRING)
+    private SenderEnum sender;
 
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false)
     @ToString.Include
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name="chat_session_id", nullable = false)
     private ChatSession chatSession;
+
+    @PrePersist
+    void onCreate(){
+        createdAt = LocalDateTime.now();
+    }
 
 }

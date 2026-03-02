@@ -14,4 +14,6 @@ public interface ChatSessionRepo extends JpaRepository<ChatSession, Long> {
     Optional<ChatSession> findByUserUsernameAndId(String username, Long id);
 
     Optional<ChatSession> findByIdAndUser(Long id, UserEntity user);
+
+    UserEntity user(UserEntity user);
 }

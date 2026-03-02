@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Set;
 
 @RestController
-@RequestMapping("/umai")
+@RequestMapping("/api/umai")
 @RequiredArgsConstructor
 public class UmaiController {
 

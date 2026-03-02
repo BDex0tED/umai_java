@@ -42,11 +42,13 @@ public class JWTFilter extends OncePerRequestFilter {
 
         if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
+        } else if (request.getParameter("token") != null) {
+            token = request.getParameter("token");
+        }
 
+        if (token != null) {
             try {
-                if (StringUtils.hasText(token)) {
-                    username = jwtService.extractUserName(token);
-                }
+                username = jwtService.extractUserName(token);
 
                 if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UserDetails userDetails = meninUserDetailsService.loadUserByUsername(username);
@@ -69,10 +71,11 @@ public class JWTFilter extends OncePerRequestFilter {
                 response.getWriter().write("JWT token expired");
                 return;
             } catch (Exception ex) {
-                logger.warn(String.format("The token is expired and not valid anymore for user=%s from IP=%s", username, request.getRemoteAddr()));
+                logger.warn(String.format("The token is not valid anymore for user=%s from IP=%s", username, request.getRemoteAddr()));
             }
         }
-        filterChain.doFilter(request, response);
+
+            filterChain.doFilter(request, response);
     }
 
 

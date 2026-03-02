@@ -36,7 +36,6 @@
       private final GenreDataService genreDataService;
 
       private final WorkMapper workMapper;
-      private final PdfService pdfService;
       private final PdfTextService pdfTextService;
       private final DropboxService dropboxService;
 
@@ -47,6 +46,7 @@
         works.sort(Comparator.comparing(Work::getTitle, Comparator.nullsLast(String::compareToIgnoreCase)).thenComparing(Work::getId));
         return workMapper.worksToAllWorksDTOs(works);
       }
+
     @Override
     @Transactional(readOnly=true)
     public WorkResponse findById(Long id) throws EntityNotFoundException {
