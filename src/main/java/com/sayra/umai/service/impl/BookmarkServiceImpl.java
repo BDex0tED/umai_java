@@ -65,9 +65,6 @@ public class BookmarkServiceImpl implements BookmarkService {
     public List<BookmarkRequest> getAllBookmarks(Principal principal) throws UserPrincipalNotFoundException {
         UserEntity user = userRepo.findByUsername(principal.getName()).orElseThrow(()->new UserPrincipalNotFoundException("User with id" + principal.getName() + " not found"));
         List<Bookmark> bookmarks = bookmarkDataService.findAllByUserOrThrow(user);
-        if(bookmarks.isEmpty()){
-            throw new EntityNotFoundException("User has no bookmarks");
-        }
         List<BookmarkRequest> bookmarkRequests = new ArrayList<>();
         for(Bookmark bookmark : bookmarks){
             BookmarkRequest bookmarkRequest = getBookmarkInDTO(bookmark);
@@ -99,10 +96,6 @@ public class BookmarkServiceImpl implements BookmarkService {
     @Override
     public void deleteAllBookmarks(Principal principal) throws UserPrincipalNotFoundException {
         UserEntity user = userRepo.findByUsername(principal.getName()).orElseThrow(()->new UserPrincipalNotFoundException("User not found"));
-        List<Bookmark> bookmarks = bookmarkDataService.findAllByUserOrThrow(user);
-        if(bookmarks.isEmpty()){
-            throw new EntityNotFoundException("User has no bookmarks");
-        }
         bookmarkDataService.deleteAllByUserOrThrow(user);
     }
 

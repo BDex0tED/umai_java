@@ -1,7 +1,9 @@
 package com.sayra.umai.service.impl;
 
+import com.sayra.umai.exception.ResourceNotFoundException;
 import com.sayra.umai.model.dto.GenreDTO;
 import com.sayra.umai.model.entity.work.Genre;
+import com.sayra.umai.model.request.GenreRequest;
 import com.sayra.umai.repo.GenreRepo;
 import com.sayra.umai.service.GenreService;
 import jakarta.persistence.EntityNotFoundException;
@@ -18,6 +20,8 @@ public class GenreServiceImpl implements GenreService {
         this.genreRepo = genreRepo;
     }
 
+
+    @Override
     @Transactional(readOnly=true)
     public List<GenreDTO> getAllGenre() {
         List<GenreDTO> allGenres = new ArrayList<>();
@@ -30,17 +34,27 @@ public class GenreServiceImpl implements GenreService {
 
         return allGenres;
     }
+    @Override
     @Transactional(readOnly=true)
-    public Genre getGenreById(Long genreId) {
-      return genreRepo.findById(genreId).orElseThrow(EntityNotFoundException::new);
+    public GenreDTO getGenreById(Long genreId) {
+      Genre genre = genreRepo.findById(genreId).orElseThrow(()->new ResourceNotFoundException("Genre with id: + " + genreId + " not found"));
+
+      GenreDTO genreDTO = new GenreDTO();
+      genreDTO.setName(genre.getName());
+      genreDTO.setId(genre.getId());
+
+      return genreDTO;
+
     }
+    @Override
     @Transactional
-    public Genre createGenre(String genreName) {
+    public GenreDTO createGenre(GenreRequest genreRequest) {
         Genre genre = new Genre();
-        genre.setName(genreName);
+        genre.setName(genreRequest.name());
         genreRepo.save(genre);
-        return genre;
+        return new GenreDTO(genre.getId(), genre.getName());
     }
+    @Override
     @Transactional
     public void deleteGenre(Long genreId) {
         if(!genreRepo.existsById(genreId)){
@@ -51,7 +65,7 @@ public class GenreServiceImpl implements GenreService {
     @Transactional
     public void fillDbWithGenres(){
         Set<String> genreNamesToAdd = new HashSet<>(Arrays.asList(
-                "Эпос", "Роман", "Согуш", "Аңгеме", "Повесть", "Кыргыз классика","Тарыхый роман"
+                "Эпос", "Роман", "Согуш", "Аңгеме", "Повесть", "Кыргыз классика", "Тарыхый роман"
         ));
         Set<String> existingGenres = genreRepo.findAll().stream().map(Genre::getName).collect(Collectors.toSet());
         genreNamesToAdd.removeAll(existingGenres);

@@ -5,6 +5,7 @@ import com.sayra.umai.model.request.AuthorRequest;
 import com.sayra.umai.model.entity.work.Author;
 import com.sayra.umai.service.AuthorService;
 import com.sayra.umai.service.impl.AuthorServiceImpl;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,13 +14,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 
-@RestController("/api/author")
+@RestController()
+@RequestMapping("/api/author")
+@RequiredArgsConstructor
 public class AuthorController {
-    private AuthorService authorService;
-    public AuthorController(AuthorService authorService) {
-        this.authorService = authorService;
-    }
-
+    private final AuthorService authorService;
 
     @GetMapping()
     public ResponseEntity<List<AuthorDTO>> getAllAuthors() {

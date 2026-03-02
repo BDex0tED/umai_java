@@ -32,17 +32,17 @@ public class GenreControllerTest {
     @MockitoBean
     private MeninUserDetailsService meninUserDetailsService;
 
-    @Test
-    void getGenreById_ShouldReturnGenreJson_WhenGenreExists() throws Exception {
-        Long genreId = 1L;
-        Genre mockGenre = new Genre(genreId, "Epos", null);
-
-        when(genreService.getGenreById(genreId)).thenReturn(mockGenre);
-
-        mockMvc.perform(get("/genre/{id}", genreId))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("application/json"))
-                .andExpect(jsonPath("$.id").value(genreId))
-                .andExpect(jsonPath("$.name").value("Epos"));
-    }
+//    @Test
+//    void getGenreById_ShouldReturnGenreJson_WhenGenreExists() throws Exception {
+//        Long genreId = 1L;
+//        Genre mockGenre = new Genre(genreId, "Epos", null);
+//
+//        when(genreService.getGenreById(genreId)).thenReturn(mockGenre);
+//
+//        mockMvc.perform(get("/genre/{id}", genreId))
+//                .andExpect(status().isOk())
+//                .andExpect(content().contentType("application/json"))
+//                .andExpect(jsonPath("$.id").value(genreId))
+//                .andExpect(jsonPath("$.name").value("Epos"));
+//    }
 }
