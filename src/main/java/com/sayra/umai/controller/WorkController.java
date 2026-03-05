@@ -1,14 +1,23 @@
 package com.sayra.umai.controller;
 
+import com.dropbox.core.DbxException;
 import com.sayra.umai.model.dto.AllWorksDTO;
+import com.sayra.umai.model.request.UploadWorkRequest;
 import com.sayra.umai.model.response.WorkResponse;
 import com.sayra.umai.model.entity.work.Work;
 import com.sayra.umai.model.dto.WorkStatus;
+import com.sayra.umai.service.WorkService;
 import com.sayra.umai.service.impl.WorkServiceImpl;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,11 +27,12 @@ import java.util.List;
 import java.util.Set;
 
 @RestController
-@RequestMapping("/api/umai")
+@RequestMapping("/api/works")
 @RequiredArgsConstructor
-public class UmaiController {
+@Validated
+public class WorkController  {
 
-    private final WorkServiceImpl workServiceImpl;
+    private final WorkService workService;
 
     @GetMapping("/home")
     public ResponseEntity<String> home(){
@@ -31,29 +41,26 @@ public class UmaiController {
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Long> uploadWork(
+            @ModelAttribute @RequestBody UploadWorkRequest uploadWorkRequest,
             @RequestParam("file") MultipartFile file,
-            @RequestParam("title") String title,
-            @RequestParam("authorId") Long authorId,
-            @RequestParam(value = "genreIds", required = false) Set<Long> genresId,
-            @RequestParam(value = "description", required = false) String description,
             @RequestParam(value = "cover", required = false) MultipartFile cover
-    ) throws IOException {
+    ) throws IOException, DbxException {
 
-        Work saved = workServiceImpl.uploadWork(file, title, authorId, genresId, description, cover);
+        Work saved = workService.uploadWork(uploadWorkRequest, file, cover);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved.getId());
     }
 
-    @GetMapping("/works")
-    public ResponseEntity<List<AllWorksDTO>> getAllWorks(){
-        return ResponseEntity.ok(workServiceImpl.getAllWorks());
+    @GetMapping
+    public ResponseEntity<Page<AllWorksDTO>> getAllWorks(@PageableDefault(size = 20, direction = Sort.Direction.ASC)Pageable pageable){
+        return ResponseEntity.ok(workService.getAllWorks(pageable));
     }
 
-    @GetMapping("/work/{id}")
-    public ResponseEntity<WorkResponse> getWorkById(@PathVariable Long id){
-        return ResponseEntity.ok(workServiceImpl.findById(id));
+    @GetMapping("/{id}")
+    public ResponseEntity<WorkResponse> getWorkById(@PathVariable @Positive Long id){
+        return ResponseEntity.ok(workService.findById(id));
     }
 
-    @GetMapping("/works/search")
+    @GetMapping("/search")
     public ResponseEntity<List<AllWorksDTO>> search(
             @RequestParam(value = "q", required = false) String q,
             @RequestParam(value = "authorId", required = false) Long authorId,
@@ -64,7 +71,7 @@ public class UmaiController {
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "20") int size
     ){
-        List<AllWorksDTO> result = workServiceImpl.searchWorks(q, authorId, genreIds, status, createdFrom, createdTo, page, size);
+        List<AllWorksDTO> result = workService.searchWorks(q, authorId, genreIds, status, createdFrom, createdTo, page, size);
         return ResponseEntity.ok(result);
     }
 }

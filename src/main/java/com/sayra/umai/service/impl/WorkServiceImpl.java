@@ -1,6 +1,9 @@
   package com.sayra.umai.service.impl;
 
+  import com.dropbox.core.DbxException;
   import com.sayra.umai.model.entity.work.*;
+  import com.sayra.umai.model.request.UploadWorkRequest;
+  import com.sayra.umai.repo.WorkRepo;
   import com.sayra.umai.repo_service.AuthorDataService;
   import com.sayra.umai.repo_service.GenreDataService;
   import com.sayra.umai.repo_service.WorkDataService;
@@ -17,6 +20,10 @@
   import lombok.extern.slf4j.Slf4j;
   import org.slf4j.Logger;
   import org.slf4j.LoggerFactory;
+  import org.springframework.data.domain.Page;
+  import org.springframework.data.domain.Pageable;
+  import org.springframework.data.domain.Sort;
+  import org.springframework.data.web.PageableDefault;
   import org.springframework.stereotype.Service;
   import org.springframework.transaction.annotation.Transactional;
   import org.springframework.web.multipart.MultipartFile;
@@ -31,6 +38,7 @@
   @RequiredArgsConstructor
   @Slf4j
   public class WorkServiceImpl implements WorkService {
+      private final WorkRepo workRepo;
       private final WorkDataService workDataService;
       private final AuthorDataService authorDataService;
       private final GenreDataService genreDataService;
@@ -41,10 +49,10 @@
 
       @Override
       @Transactional(readOnly=true)
-      public List<AllWorksDTO> getAllWorks() {
-        List<Work> works = workDataService.findAllWithGenresAndAuthor();
-        works.sort(Comparator.comparing(Work::getTitle, Comparator.nullsLast(String::compareToIgnoreCase)).thenComparing(Work::getId));
-        return workMapper.worksToAllWorksDTOs(works);
+      public Page<AllWorksDTO> getAllWorks(@PageableDefault(size = 20, direction = Sort.Direction.ASC)Pageable pageable) {
+
+          Page<Work> works = workRepo.findAll(pageable);
+          return works.map(workMapper::workToAllWorksDTO);
       }
 
     @Override
@@ -53,6 +61,7 @@
         return workMapper.workToWorkResponse(workDataService.findByIdOrThrow(id));
     }
 
+    @Override
     @Transactional(readOnly=true)
     public List<AllWorksDTO> searchWorks(String query,
                                            Long authorId,
@@ -157,7 +166,7 @@
       }
 
       @Transactional
-      public Work uploadWork(MultipartFile pdfFile, String title, Long authorId, Set<Long> genresId, String description, MultipartFile coverImage) throws IOException {
+      public Work uploadWork(UploadWorkRequest r, MultipartFile pdfFile, MultipartFile coverImage) throws IOException, DbxException {
 
           File tempPdf = pdfTextService.savePdf(pdfFile);
           List<PdfServiceImpl.ChapterData> chaptersData;
@@ -171,14 +180,21 @@
               }
           }
 
-          Work work = buildBaseWork(title, authorId, genresId, description, null);
+          Work work = buildBaseWork(r.title(), r.authorId(), r.genresId(), r.description(), null);
 
           uploadAndAttachCover(work, coverImage);
 
           buildAndAttachChapters(work, chaptersData);
 
-          log.info("Successfully uploaded and processed work '{}'", title);
-          return workDataService.saveWork(work);
+          try {
+              return workDataService.saveWork(work);
+          } catch (Exception e) {
+              if (work.getCoverDropboxPath() != null) {
+                  log.warn("DB save failed, rolling back Dropbox file: {}", work.getCoverDropboxPath());
+                  dropboxService.deleteFile(work.getCoverDropboxPath());
+              }
+              throw e;
+          }
       }
 
       private Work buildBaseWork(String title, Long authorId, Set<Long> genresId, String description, String filePath) {

@@ -11,6 +11,5 @@ public interface AuthorDataService {
   void delete(Long id);
   Author findByIdOrThrow(Long id);
   Iterable<Author> findAll();
-  List<Author> findAllWithWorks();
   boolean existsByName(String name);
 }

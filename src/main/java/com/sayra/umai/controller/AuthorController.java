@@ -5,28 +5,33 @@ import com.sayra.umai.model.request.AuthorRequest;
 import com.sayra.umai.model.entity.work.Author;
 import com.sayra.umai.service.AuthorService;
 import com.sayra.umai.service.impl.AuthorServiceImpl;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 
 @RestController()
-@RequestMapping("/api/author")
+@RequestMapping("/api/authors")
 @RequiredArgsConstructor
+@Validated
 public class AuthorController {
     private final AuthorService authorService;
 
-    @GetMapping()
-    public ResponseEntity<List<AuthorDTO>> getAllAuthors() {
-        return ResponseEntity.ok(authorService.getAllAuthors());
+    @GetMapping
+    public ResponseEntity<Page<AuthorDTO>> getAllAuthors(@PageableDefault(size = 20, direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(authorService.getAllAuthors(pageable));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AuthorDTO> getAuthorById(@PathVariable Long id) {
+    public ResponseEntity<AuthorDTO> getAuthorById(@PathVariable @Positive Long id) {
         return ResponseEntity.ok(authorService.getAuthorById(id));
     }
 

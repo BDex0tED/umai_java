@@ -58,11 +58,6 @@ public class AuthorDataServiceImpl implements AuthorDataService {
     return authorRepo.findAll();
   }
 
-  @Override
-  public List<Author> findAllWithWorks() {
-    if(authorRepo.count() == 0){throw new EntityNotFoundException("No Author found");}
-    if(authorRepo.findAllWithWorks().isEmpty()){throw new EntityNotFoundException("No Author with works found");}
-    return authorRepo.findAllWithWorks();
-  }
+
 
 }
