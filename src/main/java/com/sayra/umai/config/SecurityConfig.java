@@ -45,15 +45,15 @@ public class SecurityConfig {
 //                                "/swagger-ui/**",
 //                                "/swagger-ui.html",
 //                                "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/api/users/register",
-                                "/api/users/login",
-                                "/api/users/google-login",
-                                "/api/users/refresh-token",
+                        .requestMatchers("/api/auth/register",
+                                "/api/auth/login",
+                                "/api/auth/google-login",
+                                "/api/auth/refresh-token",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
 
-                                "/umai/home", "/umai/works", "/umai/work/**").permitAll()
+                                "/works/home", "/works", "/works/**").permitAll()
                         .anyRequest().authenticated()).
                 sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
@@ -65,7 +65,7 @@ public class SecurityConfig {
         CorsConfiguration cfg = new CorsConfiguration();
 
         // 1. Replace "*" with your exact frontend URL(s)
-        cfg.setAllowedOrigins(List.of("http://localhost:3000", "https://your-production-domain.com"));
+        cfg.setAllowedOrigins(List.of("http://localhost:3000", "https://amiriggakg.com"));
 
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("Authorization", "Content-Type"));

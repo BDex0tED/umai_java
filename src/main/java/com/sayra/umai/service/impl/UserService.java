@@ -175,7 +175,7 @@ public class UserService {
         ResponseCookie deleteCookie = ResponseCookie.from("refresh_token", "")
                 .httpOnly(true)
                 .secure(isProduction)
-                .path("/api/users")
+                .path("/api/auth")
                 .sameSite(isProduction ? "Strict" : "Lax")
                 .maxAge(0)
                 .build();
