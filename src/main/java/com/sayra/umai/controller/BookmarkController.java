@@ -1,45 +1,53 @@
 package com.sayra.umai.controller;
 
 import com.sayra.umai.model.request.BookmarkRequest;
-import com.sayra.umai.service.impl.BookmarkServiceImpl;
+import com.sayra.umai.model.response.BookmarkResponse;
+import com.sayra.umai.service.BookmarkService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.file.attribute.UserPrincipalNotFoundException;
-import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/bookmarks")
+@RequiredArgsConstructor
+@Validated
 public class BookmarkController {
-    private final BookmarkServiceImpl bookmarkService;
-    public BookmarkController(BookmarkServiceImpl bookmarkService) {
-        this.bookmarkService = bookmarkService;
-    }
-    @PostMapping("/create")
-    public ResponseEntity<BookmarkRequest> createBookmark(@RequestBody BookmarkRequest bookmarkRequest, Principal principal) throws UserPrincipalNotFoundException {
-        return ResponseEntity.ok(bookmarkService.createBookmark(bookmarkRequest, principal));
+    private final BookmarkService bookmarkService;
+
+    @PostMapping
+    public ResponseEntity<BookmarkResponse> createBookmark(@RequestBody @Valid BookmarkRequest bookmarkRequest) {
+        return ResponseEntity.ok(bookmarkService.createBookmark(bookmarkRequest));
     }
 
-    @GetMapping("/get-all")
-    public ResponseEntity<Iterable<BookmarkRequest>> getAllBookmarks(Principal principal) throws UserPrincipalNotFoundException, IllegalArgumentException {
-        return ResponseEntity.ok(bookmarkService.getAllBookmarks(principal));
+    @GetMapping
+    public ResponseEntity<Page<BookmarkResponse>> getAllBookmarks(@PageableDefault(size = 25, direction = Sort.Direction.DESC) Pageable pageable) {
+        return ResponseEntity.ok(bookmarkService.getAllBookmarks(pageable));
     }
 
-    @GetMapping("/get/{id}")
-    public ResponseEntity<BookmarkRequest> getBookmark(@PathVariable Long id, Principal principal) throws UserPrincipalNotFoundException, IllegalArgumentException {
-        return ResponseEntity.ok(bookmarkService.getBookmark(id, principal));
+    @GetMapping("/{id}")
+    public ResponseEntity<BookmarkResponse> getBookmark(@PathVariable @Positive Long id){
+        return ResponseEntity.ok(bookmarkService.getBookmark(id));
     }
 
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<String> deleteBookmark(@PathVariable Long id, Principal principal) throws UserPrincipalNotFoundException, IllegalArgumentException {
-        bookmarkService.deleteBookmark(id, principal);
-        return ResponseEntity.ok("Bookmark deleted successfully");
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteBookmark(@PathVariable @Positive Long id){
+        bookmarkService.deleteBookmark(id);
+        return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/delete-all")
-    public ResponseEntity<String> deleteAllBookmarks(Principal principal) throws UserPrincipalNotFoundException, IllegalArgumentException {
-        bookmarkService.deleteAllBookmarks(principal);
-        return ResponseEntity.ok("All bookmarks deleted successfully");
+    @DeleteMapping
+    public ResponseEntity<Void> deleteAllBookmarks() {
+        bookmarkService.deleteAllBookmarks();
+        return ResponseEntity.noContent().build();
     }
 
 
