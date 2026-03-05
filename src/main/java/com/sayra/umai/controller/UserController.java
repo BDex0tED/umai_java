@@ -3,44 +3,49 @@ package com.sayra.umai.controller;
 import com.sayra.umai.model.dto.JWTResponse;
 import com.sayra.umai.model.dto.LoginDTO;
 import com.sayra.umai.model.dto.UserDTO;
+import com.sayra.umai.model.request.RegisterRequest;
+import com.sayra.umai.model.response.RegisterResponse;
 import com.sayra.umai.service.impl.UserService;
 import com.sayra.umai.model.request.ChangePasswordRequest;
 import com.sayra.umai.model.request.TokenRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Validated
 public class UserController {
     private final UserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<UserDTO> register(@RequestBody UserDTO userDTO){
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.register(userDTO));
+    public ResponseEntity<RegisterResponse> register(@RequestBody @Valid RegisterRequest registerRequest, HttpServletResponse response){
+        return ResponseEntity.status(HttpStatus.CREATED).body(userService.register(registerRequest, response));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<JWTResponse> login(@RequestBody LoginDTO loginDTO, HttpServletResponse response){
+    public ResponseEntity<JWTResponse> login(@RequestBody @Valid LoginDTO loginDTO, HttpServletResponse response){
         return ResponseEntity.ok(userService.login(loginDTO, response));
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<String> changePassword(@RequestBody ChangePasswordRequest changePasswordRequest){
+    public ResponseEntity<Void> changePassword(@RequestBody @Valid ChangePasswordRequest changePasswordRequest){
         userService.changePassword(changePasswordRequest);
-        return ResponseEntity.status(HttpStatus.OK).body("Password changed successfully");
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<String> logout(HttpServletResponse response){
+    public ResponseEntity<Void> logout(HttpServletResponse response){
         userService.logout(response);
-        return ResponseEntity.ok("Logout successfully");
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/refresh-token")
@@ -64,8 +69,8 @@ public class UserController {
     }
 
     @DeleteMapping("/profile-photo")
-    public ResponseEntity<String> deleteProfilePhoto() {
+    public ResponseEntity<Void> deleteProfilePhoto() {
         userService.deleteProfilePhoto();
-        return ResponseEntity.ok("Profile photo deleted successfully");
+        return ResponseEntity.noContent().build();
     }
 }

@@ -2,16 +2,20 @@ package com.sayra.umai.service.impl;
 
 import com.sayra.umai.exception.ResourceNotFoundException;
 import com.sayra.umai.exception.UserNotFoundException;
+import com.sayra.umai.exception.ValidationException;
 import com.sayra.umai.model.dto.JWTResponse;
 import com.sayra.umai.model.dto.LoginDTO;
 import com.sayra.umai.model.dto.UserDTO;
 import com.sayra.umai.model.entity.user.Role;
 import com.sayra.umai.model.entity.user.UserEntity;
+import com.sayra.umai.model.request.RegisterRequest;
 import com.sayra.umai.model.request.TokenRequest;
+import com.sayra.umai.model.response.RegisterResponse;
 import com.sayra.umai.repo.RoleRepo;
 import com.sayra.umai.repo.UserEntityRepo;
 import com.sayra.umai.model.request.ChangePasswordRequest;
 import com.sayra.umai.exception.UserAlreadyExistsException;
+import com.sayra.umai.security.model.UserPrincipal;
 import com.sayra.umai.service.jwt.JWTService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.Cookie;
@@ -31,6 +35,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Duration;
@@ -58,27 +63,26 @@ public class UserService {
                 ()-> new EntityNotFoundException("User not found"));
     }
 
-    public UserDTO register(UserDTO userDTO){
-        if(userDTO.getUsername() == null || userDTO.getPassword() == null || userDTO.getEmail() == null){
-            throw new IllegalArgumentException("Invalid username/email/password");
-        }
-        if(userDTO.getPassword().length() < 8){
-            throw new IllegalArgumentException("Password must be at least 8 characters long");
+    @Transactional
+    public RegisterResponse register(RegisterRequest request, HttpServletResponse response){
+
+        if(!request.password().equals(request.confirmPassword())){
+            throw new ValidationException("Password do not match");
         }
 
-        if(userEntityRepo.findByUsername(userDTO.getUsername()).isPresent()){
-            log.info("Username already exists: {}" , userDTO.getUsername());
+        if(userEntityRepo.existsByUsername(request.username())){
+            log.info("Username already exists: {}" , request.username());
             throw new UserAlreadyExistsException("Username already exists");
         }
-        if(userEntityRepo.existsByEmail(userDTO.getEmail())){
-            log.info("Email already exists: {}" , userDTO.getEmail());
+        if(userEntityRepo.existsByEmail(request.email())){
+            log.info("Email already exists: {}" , request.email());
             throw new UserAlreadyExistsException("Email already was registered");
         }
 
         UserEntity userEntity = new UserEntity();
-        userEntity.setUsername(userDTO.getUsername());
-        userEntity.setPassword(encoder.encode(userDTO.getPassword()));
-        userEntity.setEmail(userDTO.getEmail());
+        userEntity.setUsername(request.username());
+        userEntity.setPassword(encoder.encode(request.password()));
+        userEntity.setEmail(request.email());
 
         Role userRole = roleRepo.findByName("ROLE_USER").orElseThrow(
                 ()-> new ResourceNotFoundException("Role not found"));
@@ -88,10 +92,28 @@ public class UserService {
 
         userEntityRepo.save(userEntity);
 
-        userDTO.setPassword(null);
-        return userDTO;
+        UserPrincipal userPrincipal = new UserPrincipal(userEntity);
+
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userPrincipal,
+                null,
+                userPrincipal.getAuthorities()
+        );
+
+        String accessToken = jwtService.generateToken(authentication);
+        String refreshToken = jwtService.generateRefreshToken(authentication);
+
+        setRefreshCookie(response, refreshToken);
+
+        return new RegisterResponse(
+                userEntity.getUsername(),
+                userEntity.getEmail(),
+                List.of(userEntity.getRoles().getFirst().getName()),
+                accessToken
+        );
     }
 
+    @Transactional(readOnly = true)
     public JWTResponse login(LoginDTO loginDTO, HttpServletResponse response) {
         try{
             Authentication authentication = authManager.authenticate(
@@ -118,7 +140,8 @@ public class UserService {
                     .map(role -> new SimpleGrantedAuthority(role.getName()))
                     .collect(Collectors.toList());
 
-            Authentication authentication = new UsernamePasswordAuthenticationToken(userEntity.getUsername(), null, authorities);
+            UserPrincipal userPrincipal = new UserPrincipal(userEntity);
+            Authentication authentication = new UsernamePasswordAuthenticationToken(userPrincipal, null, authorities);
             String refreshToken = jwtService.generateRefreshToken(authentication);
 
             setRefreshCookie(response, refreshToken);
@@ -131,15 +154,12 @@ public class UserService {
         }
     }
 
+    @Transactional
     public void changePassword(ChangePasswordRequest changePasswordRequest){
-        if(changePasswordRequest.getOldPassword() == null || changePasswordRequest.getNewPassword() == null){
-            throw new IllegalArgumentException("Invalid old password or new password");
-        }if(changePasswordRequest.getOldPassword().equals(changePasswordRequest.getNewPassword())){
+        if(changePasswordRequest.getOldPassword().equals(changePasswordRequest.getNewPassword())){
             throw new IllegalArgumentException("Old password and new password are the same");
         }
-        if(changePasswordRequest.getNewPassword().length() < 8){
-            throw new IllegalArgumentException("Password must be at least 8 characters long");
-        }
+
         UserEntity userEntity = getCurrentUser();
         if(!encoder.matches(changePasswordRequest.getOldPassword(), userEntity.getPassword())){
             throw new BadCredentialsException("Invalid old password");
@@ -152,12 +172,15 @@ public class UserService {
     }
 
     public void logout(HttpServletResponse response){
-        Cookie cookie = new Cookie("refresh_token", null);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(isProduction);
-        cookie.setPath("/api/users");
-        cookie.setMaxAge(0);
-        response.addCookie(cookie);
+        ResponseCookie deleteCookie = ResponseCookie.from("refresh_token", "")
+                .httpOnly(true)
+                .secure(isProduction)
+                .path("/api/users")
+                .sameSite(isProduction ? "Strict" : "Lax")
+                .maxAge(0)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
     }
 
     public JWTResponse refreshToken(HttpServletRequest request, HttpServletResponse response){
@@ -217,6 +240,7 @@ public class UserService {
         return null;
     }
 
+    @Transactional
     public String uploadProfilePhoto(MultipartFile profilePhoto) {
         UserEntity currentUser = getCurrentUser();
 
@@ -244,6 +268,7 @@ public class UserService {
         }
     }
 
+    @Transactional
     public void deleteProfilePhoto() {
         UserEntity currentUser = getCurrentUser();
 

@@ -9,31 +9,33 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/genre")
+@RequestMapping("/api/genres")
 @RequiredArgsConstructor
+@Validated
 public class GenreController {
     private final GenreService genreService;
 
-    @GetMapping()
+    @GetMapping
     public ResponseEntity<List<GenreDTO>> getAllGenre(){
         return ResponseEntity.ok(this.genreService.getAllGenre());
     }
 
-    @PostMapping()
+    @PostMapping
     public ResponseEntity<GenreDTO> createGenre(@RequestBody GenreRequest genreRequest){
         return ResponseEntity.status(HttpStatus.CREATED).body(genreService.createGenre(genreRequest));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteGenre(@PathVariable Long id){
+    public ResponseEntity<Void> deleteGenre(@PathVariable Long id){
         genreService.deleteGenre(id);
 
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(null);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")
