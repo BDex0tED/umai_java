@@ -1,7 +1,7 @@
 package com.sayra.umai.config;
 
-import com.sayra.umai.security.jwt.JWTFilter;
-import com.sayra.umai.security.service.MeninUserDetailsService;
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,7 +19,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.List;
+import com.sayra.umai.security.jwt.JWTFilter;
+import com.sayra.umai.security.service.MeninUserDetailsService;
 
 @Configuration
 @EnableWebSecurity
@@ -33,29 +34,30 @@ public class SecurityConfig {
         this.jwtFilter = jwtFilter;
     }
 
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        return http.csrf(AbstractHttpConfigurer::disable).
-                authorizeHttpRequests(request -> request
-//                        .requestMatchers(
-//                                "/api/users/register",
-//                                "/api/users/login",
-//                                "/swagger-ui/**",
-//                                "/swagger-ui.html",
-//                                "/v3/api-docs/**").permitAll()
+        return http.csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(request -> request
+                        // .requestMatchers(
+                        // "/api/users/register",
+                        // "/api/users/login",
+                        // "/swagger-ui/**",
+                        // "/swagger-ui.html",
+                        // "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/auth/register",
                                 "/api/auth/login",
                                 "/api/auth/google-login",
                                 "/api/auth/refresh-token",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/v3/api-docs/**",
-
-                                "/works/home", "/works", "/works/**").permitAll()
-                        .anyRequest().authenticated()).
-                sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                "/v3/api-docs/**")
+                        .permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/works", "/api/works/**")
+                        .permitAll()
+                        .anyRequest().authenticated())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
@@ -65,7 +67,7 @@ public class SecurityConfig {
         CorsConfiguration cfg = new CorsConfiguration();
 
         // 1. Replace "*" with your exact frontend URL(s)
-        cfg.setAllowedOrigins(List.of("http://localhost:3000", "https://amiriggakg.com"));
+        cfg.setAllowedOrigins(List.of("http://localhost:8081", "*"));
 
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("Authorization", "Content-Type"));
@@ -78,12 +80,10 @@ public class SecurityConfig {
         return source;
     }
 
-
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
     }
-
 
     @Bean
     public AuthenticationProvider authenticationProvider() {
