@@ -55,6 +55,7 @@ public interface WorkMapper {
   }
 
   @Mappings({
+      @Mapping(source = "id", target = "id"),
       @Mapping(source = "chapterNumber", target = "chapterNumber"),
       @Mapping(source = "chapterTitle", target = "chapterTitle"),
       @Mapping(source = "chunks", target = "chunks", qualifiedByName = "sortedChunks")
