@@ -1,7 +1,9 @@
 package com.sayra.umai.config;
 
+import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,6 +30,9 @@ public class SecurityConfig {
 
     private final JWTFilter jwtFilter;
     private final MeninUserDetailsService MeninUserDetailsService;
+
+    @Value("${ALLOWED_ORIGINS}")
+    String allowedOrigins;
 
     public SecurityConfig(MeninUserDetailsService meninUserDetailsService, JWTFilter jwtFilter) {
         this.MeninUserDetailsService = meninUserDetailsService;
@@ -66,8 +71,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
 
-        // 1. Replace "*" with your exact frontend URL(s)
-        cfg.setAllowedOrigins(List.of("http://localhost:8081", "*"));
+        List<String> origins = Arrays.asList(allowedOrigins.split(","));
+        cfg.setAllowedOrigins(origins);
 
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("Authorization", "Content-Type"));
@@ -79,7 +84,6 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", cfg);
         return source;
     }
-
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder(12);
