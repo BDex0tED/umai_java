@@ -1,7 +1,6 @@
 package com.sayra.umai.controller;
 
-import com.sayra.umai.service.impl.DropboxCleanupServiceImpl;
-import com.sayra.umai.service.impl.DropboxServiceImpl;
+import com.sayra.umai.service.impl.CloudinaryServiceImpl;
 import com.sayra.umai.service.impl.UserService;
 import com.sayra.umai.service.impl.WorkServiceImpl;
 import org.springframework.http.ResponseEntity;
@@ -12,38 +11,35 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/dropbox")
+@RequestMapping("/api/media")
 @CrossOrigin(origins = "*")
-public class DropboxController {
+public class MediaController {
 
-    private final DropboxServiceImpl dropboxServiceImpl;
-    private final DropboxCleanupServiceImpl cleanupService;
+    private final CloudinaryServiceImpl cloudinaryServiceImpl;
     private final UserService userService;
     private final WorkServiceImpl workServiceImpl;
 
-    public DropboxController(DropboxServiceImpl dropboxServiceImpl,
-                             DropboxCleanupServiceImpl cleanupService,
-                             UserService userService,
-                             WorkServiceImpl workServiceImpl) {
-        this.dropboxServiceImpl = dropboxServiceImpl;
-        this.cleanupService = cleanupService;
+    public MediaController(CloudinaryServiceImpl cloudinaryServiceImpl,
+                           UserService userService,
+                           WorkServiceImpl workServiceImpl) {
+        this.cloudinaryServiceImpl = cloudinaryServiceImpl;
         this.userService = userService;
         this.workServiceImpl = workServiceImpl;
     }
 
     /**
-     * Загружает файл в Dropbox
+     * Загружает файл в Cloudinary
      * @param file файл для загрузки
-     * @param subfolder подпапка для организации файлов
+     * @param folder папка для организации файлов (covers, profiles и т.д.)
      * @return URL загруженного файла
      */
     @PostMapping("/upload")
     public ResponseEntity<Map<String, String>> uploadFile(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("subfolder") String subfolder) {
+            @RequestParam("folder") String folder) {
 
         try {
-            String fileUrl = dropboxServiceImpl.uploadFile(file, subfolder);
+            String fileUrl = cloudinaryServiceImpl.uploadFile(file, folder);
             Map<String, String> response = new HashMap<>();
             response.put("url", fileUrl);
             response.put("message", "File uploaded successfully");
@@ -137,62 +133,35 @@ public class DropboxController {
     }
 
     /**
-     * Ручная очистка временных файлов
-     * @param subfolder подпапка для очистки
-     * @param daysOld количество дней (файлы старше этого возраста будут удалены)
-     * @return количество удаленных файлов
+     * Удаляет файл из Cloudinary по его publicId
+     * @param publicId идентификатор ресурса в Cloudinary
      */
-    @PostMapping("/cleanup")
-    public ResponseEntity<Map<String, Object>> manualCleanup(
-            @RequestParam("subfolder") String subfolder,
-            @RequestParam(value = "daysOld", defaultValue = "7") int daysOld) {
-
+    @DeleteMapping("/delete")
+    public ResponseEntity<Map<String, String>> deleteFile(@RequestParam("publicId") String publicId) {
         try {
-            int deletedCount = cleanupService.manualCleanup(subfolder, daysOld);
-            Map<String, Object> response = new HashMap<>();
-            response.put("deletedCount", deletedCount);
-            response.put("subfolder", subfolder);
-            response.put("daysOld", daysOld);
-            response.put("message", "Cleanup completed successfully");
+            cloudinaryServiceImpl.deleteFile(publicId);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "File deleted successfully");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to cleanup files: " + e.getMessage());
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Failed to delete file: " + e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
         }
     }
 
     /**
-     * Очистка всех временных файлов
-     * @return общее количество удаленных файлов
-     */
-    @PostMapping("/cleanup-all")
-    public ResponseEntity<Map<String, Object>> cleanupAll() {
-        try {
-            int deletedCount = cleanupService.cleanupAllTempFiles();
-            Map<String, Object> response = new HashMap<>();
-            response.put("deletedCount", deletedCount);
-            response.put("message", "All cleanup completed successfully");
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Failed to cleanup all files: " + e.getMessage());
-            return ResponseEntity.badRequest().body(errorResponse);
-        }
-    }
-
-    /**
-     * Проверяет существование файла в Dropbox
-     * @param filePath путь к файлу
+     * Проверяет существование файла в Cloudinary
+     * @param publicId идентификатор ресурса
      * @return true если файл существует
      */
     @GetMapping("/file-exists")
-    public ResponseEntity<Map<String, Object>> fileExists(@RequestParam("filePath") String filePath) {
+    public ResponseEntity<Map<String, Object>> fileExists(@RequestParam("publicId") String publicId) {
         try {
-            boolean exists = dropboxServiceImpl.fileExists(filePath);
+            boolean exists = cloudinaryServiceImpl.fileExists(publicId);
             Map<String, Object> response = new HashMap<>();
             response.put("exists", exists);
-            response.put("filePath", filePath);
+            response.put("publicId", publicId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();

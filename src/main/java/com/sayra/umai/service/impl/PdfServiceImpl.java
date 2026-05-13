@@ -6,7 +6,7 @@ import com.sayra.umai.model.entity.work.*;
 import com.sayra.umai.repo_service.AuthorDataService;
 import com.sayra.umai.repo_service.GenreDataService;
 import com.sayra.umai.repo_service.WorkDataService;
-import com.sayra.umai.service.DropboxService;
+import com.sayra.umai.service.CloudinaryService;
 import com.sayra.umai.service.PdfService;
 import com.sayra.umai.service.PdfTextService;
 import jakarta.transaction.Transactional;
@@ -24,17 +24,17 @@ public class PdfServiceImpl implements PdfService {
   private final WorkDataService workDataService;
   private final AuthorDataService authorDataService;
   private final GenreDataService genreDataService;
-  private final DropboxService dropboxService;
+  private final CloudinaryService cloudinaryService;
   private final PdfTextService pdfTextService;
   public PdfServiceImpl(WorkDataService workDataService,
                         AuthorDataService authorDataService,
                         GenreDataService genreDataService,
-                        DropboxService dropboxService,
+                        CloudinaryService cloudinaryService,
                         PdfTextService pdfTextService) {
     this.workDataService = workDataService;
     this.authorDataService = authorDataService;
     this.genreDataService = genreDataService;
-    this.dropboxService = dropboxService;
+    this.cloudinaryService = cloudinaryService;
     this.pdfTextService = pdfTextService;
   }
 
@@ -83,13 +83,13 @@ public class PdfServiceImpl implements PdfService {
       work.setGenres(genres);
       work.setStatus(WorkStatus.PENDING);
 
-      // Загружаем обложку в Dropbox, если она предоставлена
+      // Загружаем обложку в Cloudinary, если она предоставлена
       if (coverImage != null && !coverImage.isEmpty()) {
         try {
-          String coverUrl = dropboxService.uploadFile(coverImage, "covers");
+          String coverUrl = cloudinaryService.uploadFile(coverImage, "covers");
           work.setCoverUrl(coverUrl);
         } catch (Exception e) {
-          throw new RuntimeException("Ошибка при загрузке обложки в Dropbox: " + e.getMessage());
+          throw new RuntimeException("Ошибка при загрузке обложки в Cloudinary: " + e.getMessage());
         }
       }
 

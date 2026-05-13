@@ -21,8 +21,8 @@ public class Author {
     @Column(name = "photo_url")
     private String photoUrl;
 
-    @Column(name = "photo_dropbox_path")
-    private String photoDropboxPath;
+    @Column(name = "photo_public_id")
+    private String photoPublicId;
 
     @Column(nullable = false)
     @ToString.Include

@@ -40,8 +40,8 @@ public class UserEntity {
     @Column(name = "profile_photo_url")
     private String profilePhotoUrl;
 
-    @Column(name = "profile_photo_dropbox_path")
-    private String profilePhotoDropboxPath;
+    @Column(name = "profile_photo_public_id")
+    private String profilePhotoPublicId;
 
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)

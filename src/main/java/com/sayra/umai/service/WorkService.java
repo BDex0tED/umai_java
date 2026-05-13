@@ -1,6 +1,6 @@
 package com.sayra.umai.service;
 
-import com.dropbox.core.DbxException;
+
 import com.sayra.umai.model.dto.AllWorksDTO;
 import com.sayra.umai.model.dto.WorkStatus;
 import com.sayra.umai.model.entity.work.Work;
@@ -29,7 +29,7 @@ public interface WorkService {
                                   int page,
                                   int size);
 
-    Work uploadWork(UploadWorkRequest uploadWorkRequest, MultipartFile pdfFile, MultipartFile coverImage) throws IOException, DbxException;
+    Work uploadWork(UploadWorkRequest uploadWorkRequest, MultipartFile pdfFile, MultipartFile coverImage) throws IOException, Exception;
 
 
 

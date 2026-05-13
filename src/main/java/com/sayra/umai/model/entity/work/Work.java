@@ -46,8 +46,8 @@ public class Work {
     @Column(name = "cover_url")
     private String coverUrl;
 
-    @Column(name = "cover_dropbox_path")
-    private String coverDropboxPath;
+    @Column(name = "cover_public_id")
+    private String coverPublicId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

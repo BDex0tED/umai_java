@@ -1,6 +1,6 @@
 package com.sayra.umai.controller;
 
-import com.dropbox.core.DbxException;
+
 import com.sayra.umai.model.dto.AllWorksDTO;
 import com.sayra.umai.model.request.UploadWorkRequest;
 import com.sayra.umai.model.response.WorkResponse;
@@ -44,7 +44,7 @@ public class WorkController  {
             @ModelAttribute @RequestBody UploadWorkRequest uploadWorkRequest,
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "cover", required = false) MultipartFile cover
-    ) throws IOException, DbxException {
+    ) throws IOException, Exception {
 
         Work saved = workService.uploadWork(uploadWorkRequest, file, cover);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved.getId());

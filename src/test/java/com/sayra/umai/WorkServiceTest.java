@@ -2,7 +2,7 @@ package com.sayra.umai;
 
 import com.sayra.umai.model.entity.work.Work;
 import com.sayra.umai.repo_service.WorkDataService;
-import com.sayra.umai.service.DropboxService;
+import com.sayra.umai.service.CloudinaryService;
 import com.sayra.umai.service.impl.WorkServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,13 +23,13 @@ class WorkServiceTest {
     private WorkDataService workDataService;
 
     @Mock
-    private DropboxService dropboxService;
+    private CloudinaryService cloudinaryService;
 
     @InjectMocks
     private WorkServiceImpl workService;
 
     @Test
-    void uploadCover_ShouldUploadToDropboxAndSaveWork_WhenFileIsValid() throws Exception {
+    void uploadCover_ShouldUploadToCloudinaryAndSaveWork_WhenFileIsValid() throws Exception {
         Long workId = 1L;
         Work mockWork = new Work();
         mockWork.setId(workId);
@@ -42,15 +42,15 @@ class WorkServiceTest {
                 "fake image content".getBytes()
         );
 
-        String expectedDropboxUrl = "https://dropbox.com/fake-url/cover.jpg";
+        String expectedCloudinaryUrl = "https://res.cloudinary.com/demo/image/upload/v1234/covers/cover.jpg";
 
         when(workDataService.findByIdOrThrow(workId)).thenReturn(mockWork);
-        when(dropboxService.uploadFile(fakeFile, "covers")).thenReturn(expectedDropboxUrl);
+        when(cloudinaryService.uploadFile(fakeFile, "covers")).thenReturn(expectedCloudinaryUrl);
 
         String resultUrl = workService.uploadCover(workId, fakeFile);
 
-        assertThat(resultUrl).isEqualTo(expectedDropboxUrl);
-        assertThat(mockWork.getCoverUrl()).isEqualTo(expectedDropboxUrl); // Убеждаемся, что в объект Work записался URL
+        assertThat(resultUrl).isEqualTo(expectedCloudinaryUrl);
+        assertThat(mockWork.getCoverUrl()).isEqualTo(expectedCloudinaryUrl);
 
         verify(workDataService, times(1)).saveWork(mockWork);
     }
@@ -69,7 +69,7 @@ class WorkServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Cover image is required");
 
-        verifyNoInteractions(dropboxService);
+        verifyNoInteractions(cloudinaryService);
         verify(workDataService, never()).saveWork(any());
     }
 

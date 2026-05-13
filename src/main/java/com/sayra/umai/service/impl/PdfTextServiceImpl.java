@@ -12,7 +12,6 @@ import org.apache.pdfbox.pdmodel.interactive.documentnavigation.destination.PDPa
 import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDDocumentOutline;
 import org.apache.pdfbox.pdmodel.interactive.documentnavigation.outline.PDOutlineItem;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -264,7 +263,6 @@ public class  PdfTextServiceImpl implements PdfTextService {
     
     return chunks;
   }
-  @NotNull
   public String cleanText(String text) {
     StringBuilder sb = new StringBuilder();
     for (String line : text.split("\\r?\\n")) {

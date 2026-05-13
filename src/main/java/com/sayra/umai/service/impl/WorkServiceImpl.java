@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.dropbox.core.DbxException;
+
 import com.sayra.umai.model.dto.AllWorksDTO;
 import com.sayra.umai.model.dto.ChunkType;
 import com.sayra.umai.model.dto.GenreDTO;
@@ -33,7 +33,7 @@ import com.sayra.umai.repo.WorkRepo;
 import com.sayra.umai.repo_service.AuthorDataService;
 import com.sayra.umai.repo_service.GenreDataService;
 import com.sayra.umai.repo_service.WorkDataService;
-import com.sayra.umai.service.DropboxService;
+import com.sayra.umai.service.CloudinaryService;
 import com.sayra.umai.service.PdfTextService;
 import com.sayra.umai.service.WorkMapper;
 import com.sayra.umai.service.WorkService;
@@ -53,7 +53,7 @@ public class WorkServiceImpl implements WorkService {
 
     private final WorkMapper workMapper;
     private final PdfTextService pdfTextService;
-    private final DropboxService dropboxService;
+    private final CloudinaryService cloudinaryService;
 
     @Override
     @Transactional(readOnly = true)
@@ -145,13 +145,13 @@ public class WorkServiceImpl implements WorkService {
         }
 
         try {
-            String coverUrl = dropboxService.uploadFile(coverImage, "covers");
+            String coverUrl = cloudinaryService.uploadFile(coverImage, "covers");
             work.setCoverUrl(coverUrl);
             workDataService.saveWork(work);
             return coverUrl;
         } catch (Exception e) {
             log.warn("Error uploading cover image for work '{}': {}", work.getTitle(), e.getMessage());
-            throw new RuntimeException("Ошибка при загрузке обложки в Dropbox: " + e.getMessage());
+            throw new RuntimeException("Ошибка при загрузке обложки в Cloudinary: " + e.getMessage());
         }
     }
 
@@ -165,23 +165,22 @@ public class WorkServiceImpl implements WorkService {
     public void deleteCover(Long workId) throws EntityNotFoundException {
         Work work = workDataService.findByIdOrThrow(workId);
 
-        // Use the stored path! No more URL parsing needed.
-        if (work.getCoverDropboxPath() != null) {
+        if (work.getCoverPublicId() != null) {
             try {
-                dropboxService.deleteFile(work.getCoverDropboxPath());
+                cloudinaryService.deleteFile(work.getCoverPublicId());
             } catch (Exception e) {
-                log.error("Ошибка при удалении обложки из Dropbox: " + e.getMessage());
+                log.error("Ошибка при удалении обложки из Cloudinary: " + e.getMessage());
             }
         }
 
         work.setCoverUrl(null);
-        work.setCoverDropboxPath(null); // Clear the path
+        work.setCoverPublicId(null);
         workDataService.saveWork(work);
     }
 
     @Transactional
     public Work uploadWork(UploadWorkRequest r, MultipartFile pdfFile, MultipartFile coverImage)
-            throws IOException, DbxException {
+            throws IOException, Exception {
 
         File tempPdf = pdfTextService.savePdf(pdfFile);
         List<PdfServiceImpl.ChapterData> chaptersData;
@@ -204,9 +203,9 @@ public class WorkServiceImpl implements WorkService {
         try {
             return workDataService.saveWork(work);
         } catch (Exception e) {
-            if (work.getCoverDropboxPath() != null) {
-                log.warn("DB save failed, rolling back Dropbox file: {}", work.getCoverDropboxPath());
-                dropboxService.deleteFile(work.getCoverDropboxPath());
+            if (work.getCoverPublicId() != null) {
+                log.warn("DB save failed, rolling back Cloudinary file: {}", work.getCoverPublicId());
+                cloudinaryService.deleteFile(work.getCoverPublicId());
             }
             throw e;
         }
@@ -237,13 +236,13 @@ public class WorkServiceImpl implements WorkService {
         }
 
         try {
-            String uniqueFilename = UUID.randomUUID().toString() + "_" + coverImage.getOriginalFilename();
-            String dropboxPath = "/covers/" + uniqueFilename;
+            String coverUrl = cloudinaryService.uploadFile(coverImage, "covers");
 
-            String coverUrl = dropboxService.uploadFile(coverImage, dropboxPath);
+            // Извлекаем publicId из Cloudinary URL
+            String publicId = extractPublicId(coverUrl);
 
             work.setCoverUrl(coverUrl);
-            work.setCoverDropboxPath(dropboxPath);
+            work.setCoverPublicId(publicId);
         } catch (IllegalArgumentException e) {
             log.warn("Invalid cover image provided: {}", e.getMessage());
             throw e;
@@ -278,5 +277,23 @@ public class WorkServiceImpl implements WorkService {
         }
 
         work.setChapters(chapters);
+    }
+
+    /**
+     * Извлекает publicId из Cloudinary URL.
+     * Пример: https://res.cloudinary.com/{cloud}/image/upload/v123/covers/20250514_abc.jpg
+     * Результат: covers/20250514_abc
+     */
+    private String extractPublicId(String url) {
+        if (url == null) return null;
+        int dotIndex = url.lastIndexOf('.');
+        String withoutExt = dotIndex > 0 ? url.substring(0, dotIndex) : url;
+        int uploadIdx = withoutExt.indexOf("/upload/");
+        if (uploadIdx < 0) return withoutExt;
+        String afterUpload = withoutExt.substring(uploadIdx + "/upload/".length());
+        if (afterUpload.startsWith("v") && afterUpload.contains("/")) {
+            afterUpload = afterUpload.substring(afterUpload.indexOf('/') + 1);
+        }
+        return afterUpload;
     }
 }

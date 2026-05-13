@@ -51,7 +51,7 @@ public class UserService {
     private final PasswordEncoder encoder;
     private final UserEntityRepo userEntityRepo;
     private final RoleRepo roleRepo;
-    private final DropboxServiceImpl dropboxServiceImpl;
+    private final CloudinaryServiceImpl cloudinaryServiceImpl;
     private final GoogleAuthService googleAuthService;
 
     @Value( "${umai.app.isproduction}")
@@ -249,22 +249,24 @@ public class UserService {
         }
 
         try {
-            if (currentUser.getProfilePhotoDropboxPath() != null) {
+            // Удаляем старое фото перед загрузкой нового
+            if (currentUser.getProfilePhotoPublicId() != null) {
                 deleteProfilePhoto();
             }
 
-            String uniqueFilename = UUID.randomUUID() + "_" + profilePhoto.getOriginalFilename();
-            String dropboxPath = "/profiles/" + uniqueFilename;
+            String photoUrl = cloudinaryServiceImpl.uploadFile(profilePhoto, "profiles");
 
-            String photoUrl = dropboxServiceImpl.uploadFile(profilePhoto, dropboxPath);
+            // Извлекаем publicId из URL для последующего удаления
+            // Формат Cloudinary URL: .../upload/v<ver>/<publicId>.<ext>
+            String publicId = extractPublicId(photoUrl);
 
             currentUser.setProfilePhotoUrl(photoUrl);
-            currentUser.setProfilePhotoDropboxPath(dropboxPath);
+            currentUser.setProfilePhotoPublicId(publicId);
             userEntityRepo.save(currentUser);
 
             return photoUrl;
         } catch (Exception e) {
-            throw new RuntimeException("Ошибка при загрузке фото профиля в Dropbox: " + e.getMessage());
+            throw new RuntimeException("Ошибка при загрузке фото профиля в Cloudinary: " + e.getMessage());
         }
     }
 
@@ -272,16 +274,16 @@ public class UserService {
     public void deleteProfilePhoto() {
         UserEntity currentUser = getCurrentUser();
 
-        if (currentUser.getProfilePhotoDropboxPath() != null) {
+        if (currentUser.getProfilePhotoPublicId() != null) {
             try {
-                dropboxServiceImpl.deleteFile(currentUser.getProfilePhotoDropboxPath());
+                cloudinaryServiceImpl.deleteFile(currentUser.getProfilePhotoPublicId());
             } catch (Exception e) {
-                log.error("Ошибка при удалении фото профиля из Dropbox: {}", e.getMessage());
+                log.error("Ошибка при удалении фото профиля из Cloudinary: {}", e.getMessage());
             }
         }
 
         currentUser.setProfilePhotoUrl(null);
-        currentUser.setProfilePhotoDropboxPath(null);
+        currentUser.setProfilePhotoPublicId(null);
         userEntityRepo.save(currentUser);
     }
     public UserDTO getCurrentUserInfo() {
@@ -291,5 +293,27 @@ public class UserService {
         userDTO.setEmail(currentUser.getEmail());
         userDTO.setProfilePhotoUrl(currentUser.getProfilePhotoUrl());
         return userDTO;
+    }
+
+    /**
+     * Извлекает publicId из Cloudinary URL.
+     * Пример URL:
+     * https://res.cloudinary.com/{cloud}/image/upload/v1234567890/profiles/20250514_abc.jpg
+     * Результат: profiles/20250514_abc
+     */
+    private String extractPublicId(String url) {
+        if (url == null) return null;
+        // Убираем расширение файла
+        int dotIndex = url.lastIndexOf('.');
+        String withoutExt = dotIndex > 0 ? url.substring(0, dotIndex) : url;
+        // Ищем часть после "/upload/"
+        int uploadIdx = withoutExt.indexOf("/upload/");
+        if (uploadIdx < 0) return withoutExt;
+        String afterUpload = withoutExt.substring(uploadIdx + "/upload/".length());
+        // Если есть версия (/v1234567890/), пропускаем её
+        if (afterUpload.startsWith("v") && afterUpload.contains("/")) {
+            afterUpload = afterUpload.substring(afterUpload.indexOf('/') + 1);
+        }
+        return afterUpload;
     }
 }

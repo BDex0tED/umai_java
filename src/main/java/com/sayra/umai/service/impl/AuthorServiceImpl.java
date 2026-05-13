@@ -11,7 +11,7 @@ import com.sayra.umai.repo.AuthorRepo;
 import com.sayra.umai.repo_service.UserEntityDataService;
 import com.sayra.umai.repo_service.WorkDataService;
 import com.sayra.umai.service.AuthorService;
-import com.sayra.umai.service.DropboxService;
+import com.sayra.umai.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -30,7 +30,7 @@ public class AuthorServiceImpl implements AuthorService {
     private final WorkDataService workDataService;
     private final AuthorMapper authorMapper;
     private final UserEntityDataService userEntityDataService;
-    private final DropboxService dropboxService;
+    private final CloudinaryService cloudinaryService;
 
 
   @Transactional(readOnly = true)
@@ -61,13 +61,10 @@ public class AuthorServiceImpl implements AuthorService {
         author.setDate(authorRequest.getDateOfBirth());
 
         try{
-            String uniqueName = UUID.randomUUID() + "_" + authorRequest.getPhoto().getOriginalFilename();
-            String dropboxPath = "/authors/" + uniqueName;
-
-            String authorUrl = dropboxService.uploadFile(authorRequest.getPhoto(),dropboxPath);
+            String authorUrl = cloudinaryService.uploadFile(authorRequest.getPhoto(), "authors");
 
             author.setPhotoUrl(authorUrl);
-            author.setPhotoDropboxPath(dropboxPath);
+            author.setPhotoPublicId(extractPublicId(authorUrl));
         }  catch(Exception e){
             log.warn("Author photo upload failed: {}", e.getMessage());
         }
@@ -93,11 +90,23 @@ public class AuthorServiceImpl implements AuthorService {
         author.setDate(null);
         author.setWiki(null);
         author.setPhotoUrl(null);
-        author.setPhotoDropboxPath(null);
+        author.setPhotoPublicId(null);
         authorRepo.save(author);
 
         log.info("Created Kyrgyz National Author");
     }
 
 
+    private String extractPublicId(String url) {
+        if (url == null) return null;
+        int dotIndex = url.lastIndexOf('.');
+        String withoutExt = dotIndex > 0 ? url.substring(0, dotIndex) : url;
+        int uploadIdx = withoutExt.indexOf("/upload/");
+        if (uploadIdx < 0) return withoutExt;
+        String afterUpload = withoutExt.substring(uploadIdx + "/upload/".length());
+        if (afterUpload.startsWith("v") && afterUpload.contains("/")) {
+            afterUpload = afterUpload.substring(afterUpload.indexOf('/') + 1);
+        }
+        return afterUpload;
+    }
 }
