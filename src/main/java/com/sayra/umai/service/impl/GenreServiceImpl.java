@@ -65,7 +65,7 @@ public class GenreServiceImpl implements GenreService {
     @Transactional
     public void fillDbWithGenres(){
         Set<String> genreNamesToAdd = new HashSet<>(Arrays.asList(
-                "Эпос", "Роман", "Согуш", "Аңгеме", "Повесть", "Кыргыз классика", "Тарыхый роман"
+                "Эпос", "Роман", "Согуш", "Аңгеме", "Повесть", "Кыргыз классика", "Тарыхый роман", "Поэзия"
         ));
         Set<String> existingGenres = genreRepo.findAll().stream().map(Genre::getName).collect(Collectors.toSet());
         genreNamesToAdd.removeAll(existingGenres);
