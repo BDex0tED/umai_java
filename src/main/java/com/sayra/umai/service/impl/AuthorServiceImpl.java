@@ -76,26 +76,47 @@ public class AuthorServiceImpl implements AuthorService {
         authorRepo.save(author);
       return authorMapper.toAuthorDTO(author);
   }
-  @Transactional
-  public void createKyrgyzNationalAuthor() {
-        String name = "Кыргыз эл чыгармачылыгы";
+    @Transactional
+    public void createKyrgyzNationalAuthor() {
 
-        if(userEntityDataService.existsByUsernameOrThrow(name)){
-            log.info("Kyrgyz National Author already exists");
+        createAuthor(
+                "Кыргыз эл чыгармачылыгы",
+                "Kyrgyz National Folklore",
+                null
+        );
+
+
+        createAuthor(
+                "Жусуп Баласагын",
+                "Жусуп Баласагын Хасс Хажиб — Карахан доорундагы акын, ойчул жана жазуучу.",
+                "1016–1075"
+        );
+
+        createAuthor(
+                "Токтогул Сатылганов",
+                "Токтогул Сатылганов — кыргыздын залкар акыны, комузчу жана төкмө акын.",
+                "1864–1933"
+        );
+
+        log.info("Created Kyrgyz authors");
+    }
+
+    private void createAuthor(String name, String bio, String date) {
+        if (userEntityDataService.existsByUsernameOrThrow(name)) {
+            log.warn("Author with name {} already exists", name);
             return;
         }
+
         Author author = new Author();
         author.setName(name);
-        author.setBio(null);
-        author.setDate(null);
+        author.setBio(bio);
+        author.setDate(date);
         author.setWiki(null);
         author.setPhotoUrl(null);
         author.setPhotoPublicId(null);
+
         authorRepo.save(author);
-
-        log.info("Created Kyrgyz National Author");
     }
-
 
     private String extractPublicId(String url) {
         if (url == null) return null;
